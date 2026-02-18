@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="{% if not user %}is-landing{% endif %}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IssueBell</title>
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
-  <meta name="theme-color" content="#1a3a6b" />
+  <meta name="theme-color" content="#6366f1" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -62,158 +62,260 @@
     </nav>
   </header>
 
-  <!-- ── Main ────────────────────────────────────────────────────────────── -->
-  <main class="container">
-    {% set error = request.query_params.get('error') %}
-    {% if error == 'setup_required' %}
+  {% set error = request.query_params.get('error') %}
+
+  {% if not user %}
+  <!-- ═══════════════════ LANDING — scroll-snap ═══════════════════ -->
+  <div class="snap-wrap">
+
+    <!-- ── 0: Hero ──────────────────────────────────────────────── -->
+    <section class="snap snap--hero">
+      {% if error == 'setup_required' %}
+        <div class="alert alert--warn snap-alert">
+          <strong>⚙️ Configuration required</strong> — Set <code>DISCORD_CLIENT_ID</code> and <code>DISCORD_CLIENT_SECRET</code> in <code>.env</code> then restart.
+          <a href="/" class="alert__link">Dismiss</a>
+        </div>
+      {% elif error == 'invalid_state' %}
+        <div class="alert alert--error snap-alert">
+          <strong>⚠️ Auth error</strong> — State mismatch. Please try again.
+          <a href="/" class="alert__link">Dismiss</a>
+        </div>
+      {% endif %}
+
+      <div class="hero__inner">
+        <span class="hero__eyebrow">🔔 GitHub Issue Notifications</span>
+        <h1 class="hero__title">Get notified.<br/><span>Stay in the&nbsp;loop.</span></h1>
+        <p class="hero__sub">
+          IssueBell watches GitHub repositories and sends you a Discord DM
+          the moment a new issue with your chosen label is opened.
+        </p>
+        <a href="/auth/login" class="btn btn--discord btn--lg">
+          <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+          Get Started — Login with Discord
+        </a>
+      </div>
+
+      <a class="scroll-cue" href="#step-1">
+        <span class="scroll-cue__label">How it works</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </a>
+    </section>
+
+    <!-- ── 1: Connect Discord ────────────────────────────────────── -->
+    <section class="snap snap--step" id="step-1">
+      <div class="step__copy">
+        <div class="step__num">01</div>
+        <h2 class="step__title">Connect your Discord</h2>
+        <p class="step__desc">
+          Log in with your Discord account in one click — no password, no signup form.
+          IssueBell uses OAuth2 so you're always in control.
+        </p>
+      </div>
+      <div class="step__visual">
+        <div class="mock">
+          <div class="mock__titlebar">
+            <span class="mock__dot mock__dot--red"></span>
+            <span class="mock__dot mock__dot--yellow"></span>
+            <span class="mock__dot mock__dot--green"></span>
+            <span class="mock__url">issuebell.app</span>
+          </div>
+          <div class="mock__body mock__body--center">
+            <div class="mock__brand">🔔 IssueBell</div>
+            <p class="mock__tagline">GitHub issue alerts → Discord DMs</p>
+            <div class="mock__discord-btn">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
+              Login with Discord
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 2: Add Subscription ──────────────────────────────────── -->
+    <section class="snap snap--step snap--alt" id="step-2">
+      <div class="step__copy">
+        <div class="step__num">02</div>
+        <h2 class="step__title">Watch a repo &amp; label</h2>
+        <p class="step__desc">
+          Enter any GitHub repository and the issue label you care about.
+          Regex patterns are supported — <code>help.*</code>, <code>good.first.issue</code> — so one rule can catch many.
+        </p>
+      </div>
+      <div class="step__visual">
+        <div class="mock">
+          <div class="mock__titlebar">
+            <span class="mock__dot mock__dot--red"></span>
+            <span class="mock__dot mock__dot--yellow"></span>
+            <span class="mock__dot mock__dot--green"></span>
+            <span class="mock__url">issuebell.app</span>
+          </div>
+          <div class="mock__body">
+            <div class="mock__panel-title">Add Subscription</div>
+            <div class="mock__field">
+              <div class="mock__label">Repository</div>
+              <div class="mock__input mock__input--filled">facebook/react</div>
+            </div>
+            <div class="mock__field">
+              <div class="mock__label">Label <span class="badge-regex">regex</span></div>
+              <div class="mock__input mock__input--filled mock__input--focus">good.first.issue</div>
+            </div>
+            <div class="mock__submit">+ Add Subscription</div>
+            <div class="mock__divider"></div>
+            <div class="mock__sub-row">
+              <div>
+                <div class="mock__sub-repo">facebook/react</div>
+                <span class="mock__chip">good.first.issue</span>
+              </div>
+              <span class="mock__remove">Remove</span>
+            </div>
+            <div class="mock__sub-row mock__sub-row--dim">
+              <div>
+                <div class="mock__sub-repo">vercel/next.js</div>
+                <span class="mock__chip">bug</span>
+              </div>
+              <span class="mock__remove">Remove</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 3: Get Notified ──────────────────────────────────────── -->
+    <section class="snap snap--step" id="step-3">
+      <div class="step__copy">
+        <div class="step__num">03</div>
+        <h2 class="step__title">Get the DM instantly</h2>
+        <p class="step__desc">
+          The moment a matching issue is opened, IssueBell delivers a Discord DM
+          with the title, label, and a direct link — right when it matters.
+        </p>
+      </div>
+      <div class="step__visual">
+        <div class="mock mock--dark">
+          <div class="mock__dm-sidebar">
+            <div class="mock__dm-sitem mock__dm-sitem--active">🔔 IssueBell</div>
+            <div class="mock__dm-sitem">👤 someuser</div>
+          </div>
+          <div class="mock__dm-main">
+            <div class="mock__dm-header">Direct Message — IssueBell <span class="mock__dm-badge">APP</span></div>
+            <div class="mock__dm-msg">
+              <div class="mock__dm-avatar">🔔</div>
+              <div class="mock__dm-content">
+                <div class="mock__dm-meta"><strong>IssueBell</strong> <span class="mock__dm-time">Today at 3:42 PM</span></div>
+                <div class="mock__dm-bubble">
+                  🔔 New issue on <strong>facebook/react</strong><br/>
+                  <span class="mock__dm-line"><strong>Title</strong> Add TypeScript support for ref callbacks</span>
+                  <span class="mock__dm-line"><strong>Label</strong> <span class="mock__chip mock__chip--light">good first issue</span></span>
+                  <span class="mock__dm-link">🔗 View Issue #31415 →</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer snap snap--footer">
+      <p>
+        Made with ❤️ &amp; 🔔
+        &nbsp;·&nbsp;
+        <a href="https://github.com/back1ash/IssueBell" target="_blank" rel="noopener">GitHub</a>
+      </p>
+    </footer>
+
+  </div><!-- /snap-wrap -->
+
+  {% else %}
+  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+  {% if error == 'setup_required' %}
+    <div class="container" style="padding-bottom:0">
       <div class="alert alert--warn">
         <strong>⚙️ Configuration required</strong><br/>
         Please set <code>DISCORD_CLIENT_ID</code> and <code>DISCORD_CLIENT_SECRET</code>
-        in your <code>.env</code> file, then restart the server.<br/>
+        in your <code>.env</code> file, then restart the server.
         <a href="/" class="alert__link">Dismiss</a>
       </div>
-    {% elif error == 'invalid_state' %}
+    </div>
+  {% elif error == 'invalid_state' %}
+    <div class="container" style="padding-bottom:0">
       <div class="alert alert--error">
         <strong>⚠️ Authentication error</strong> — OAuth2 state mismatch. Please try again.
         <a href="/" class="alert__link">Dismiss</a>
       </div>
-    {% endif %}
-    {% if not user %}
-      <!-- Landing / not logged in -->
-      <section class="hero">
-        <h1 class="hero__title">Get notified. Stay in the loop.</h1>
-        <p class="hero__sub">
-          IssueBell watches GitHub repositories and sends you a Discord DM the moment
-          a new issue with your chosen label is opened.
-        </p>
-        <a href="/auth/login" class="btn btn--discord btn--lg">
-          <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
-          </svg>
-          Get Started — Login with Discord
-        </a>
-        <div class="features">
-          <div class="feature-card">
-            <span class="feature-card__icon">🏷️</span>
-            <h3>Label Filtering</h3>
-            <p>Subscribe to any label — <code>good first issue</code>, <code>bug</code>, <code>help wanted</code>, or your own.</p>
+    </div>
+  {% endif %}
+
+  <main class="container">
+    <div class="dashboard">
+      <div class="panel">
+        <h2 class="panel__title">Add Subscription</h2>
+        <form id="add-form" class="add-form">
+          <div class="form-group">
+            <label class="form-label" for="repo">Repository</label>
+            <input id="repo" class="form-input" type="text" placeholder="owner/repo-name"
+              required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" />
+            <span class="form-hint">e.g. <code>facebook/react</code></span>
           </div>
-          <div class="feature-card">
-            <span class="feature-card__icon">⚡</span>
-            <h3>Real-time via Webhooks</h3>
-            <p>GitHub pushes events to IssueBell instantly — no polling delay.</p>
+          <div class="form-group">
+            <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
+            <input id="label" class="form-input" type="text" placeholder="good-first-issue" required />
+            <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
           </div>
-          <div class="feature-card">
-            <span class="feature-card__icon">💬</span>
-            <h3>Discord DM</h3>
-            <p>Notifications land right in your DMs with all the details you need to jump in.</p>
-          </div>
-        </div>
-      </section>
-
-    {% else %}
-      <!-- Dashboard -->
-      <div class="dashboard">
-        <div class="panel">
-          <h2 class="panel__title">Add Subscription</h2>
-          <form id="add-form" class="add-form">
-            <div class="form-group">
-              <label class="form-label" for="repo">Repository</label>
-              <input
-                id="repo"
-                class="form-input"
-                type="text"
-                placeholder="owner/repo-name"
-                required
-                pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"
-              />
-              <span class="form-hint">e.g. <code>facebook/react</code></span>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
-              <input
-                id="label"
-                class="form-input"
-                type="text"
-                placeholder="good-first-issue"
-                required
-              />
-              <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
-            </div>
-            <button type="submit" class="btn btn--primary btn--full">
-              + Add Subscription
-            </button>
-            <p id="form-error" class="form-error" hidden></p>
-          </form>
-        </div>
-
-        <div class="panel panel--subs">
-          <h2 class="panel__title">
-            My Subscriptions
-            <span class="badge">{{ subscriptions | length }}</span>
-          </h2>
-
-          {% if subscriptions %}
-            <ul id="sub-list" class="sub-list">
-              {% for sub in subscriptions %}
-                <li class="sub-item" data-id="{{ sub.id }}">
-                  <div class="sub-item__info">
-                    <a
-                      class="sub-item__repo"
-                      href="https://github.com/{{ sub.repo_full_name }}"
-                      target="_blank"
-                      rel="noopener"
-                    >{{ sub.repo_full_name }}</a>
-                    <span class="sub-item__label">{{ sub.label }}</span>
-                  </div>
-                  <button
-                    class="btn btn--ghost btn--sm btn--danger"
-                    onclick="deleteSub({{ sub.id }}, this)"
-                  >Remove</button>
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <div id="empty-state" class="empty-state">
-              <span class="empty-state__icon">🔕</span>
-              <p>No subscriptions yet.<br/>Add one above to start receiving notifications.</p>
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="panel panel--setup">
-          <h2 class="panel__title">Webhook Setup</h2>
-          <p class="setup-desc">
-            For each GitHub repository you want to monitor, add a webhook:
-          </p>
-          <ol class="setup-steps">
-            <li>Go to <strong>repository → Settings → Webhooks → Add webhook</strong></li>
-            <li>
-              Set <strong>Payload URL</strong> to:<br/>
-              <code class="code-block" id="webhook-url">{{ request.base_url }}webhook/github</code>
-            </li>
-            <li>Set <strong>Content type</strong> to <code>application/json</code></li>
-            <li>
-              Set <strong>Secret</strong> to the value of
-              <code>GITHUB_WEBHOOK_SECRET</code> from your <code>.env</code>
-            </li>
-            <li>Under <em>Which events?</em> choose <strong>Issues</strong> only</li>
-            <li>Click <strong>Add webhook</strong></li>
-          </ol>
-        </div>
+          <button type="submit" class="btn btn--primary btn--full">+ Add Subscription</button>
+          <p id="form-error" class="form-error" hidden></p>
+        </form>
       </div>
-    {% endif %}
+
+      <div class="panel panel--subs">
+        <h2 class="panel__title">
+          My Subscriptions
+          <span class="badge">{{ subscriptions | length }}</span>
+        </h2>
+        {% if subscriptions %}
+          <ul id="sub-list" class="sub-list">
+            {% for sub in subscriptions %}
+              <li class="sub-item" data-id="{{ sub.id }}">
+                <div class="sub-item__info">
+                  <a class="sub-item__repo" href="https://github.com/{{ sub.repo_full_name }}"
+                    target="_blank" rel="noopener">{{ sub.repo_full_name }}</a>
+                  <span class="sub-item__label">{{ sub.label }}</span>
+                </div>
+                <button class="btn btn--ghost btn--sm btn--danger"
+                  onclick="deleteSub({{ sub.id }}, this)">Remove</button>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div id="empty-state" class="empty-state">
+            <span class="empty-state__icon">🔕</span>
+            <p>No subscriptions yet.<br/>Add one above to start receiving notifications.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="panel panel--setup">
+        <h2 class="panel__title">Webhook Setup</h2>
+        <p class="setup-desc">For each GitHub repository you want to monitor, add a webhook:</p>
+        <ul class="setup-steps">
+          <li>Go to <strong>repository → Settings → Webhooks → Add webhook</strong></li>
+          <li>
+            Set <strong>Payload URL</strong> to:<br/>
+            <code class="code-block" id="webhook-url">{{ request.base_url }}webhook/github</code>
+          </li>
+          <li>Set <strong>Content type</strong> to <code>application/json</code></li>
+          <li>Set <strong>Secret</strong> to the value of <code>GITHUB_WEBHOOK_SECRET</code> from your <code>.env</code></li>
+          <li>Under <em>Which events?</em> choose <strong>Issues</strong> only</li>
+          <li>Click <strong>Add webhook</strong></li>
+        </ul>
+      </div>
+    </div>
   </main>
 
   <footer class="footer">
-    <p>
-      Made with ❤️ &amp; 🔔
-      &nbsp;·&nbsp;
-      <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    <p>Made with ❤️ &amp; 🔔 &nbsp;·&nbsp;
+      <a href="https://github.com/back1ash/IssueBell" target="_blank" rel="noopener">GitHub</a>
     </p>
   </footer>
-
-  {% if user %}
   <script src="/static/app.js"></script>
   {% endif %}
 </body>
