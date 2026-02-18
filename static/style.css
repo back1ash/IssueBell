@@ -114,6 +114,29 @@ code {
 }
 .navbar__bell { font-size: 1.3rem; }
 .navbar__actions { display: flex; align-items: center; gap: 12px; }
+.navbar__social { display: flex; align-items: center; gap: 4px; }
+.navbar__divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.btn--icon {
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  gap: 5px;
+}
+.btn--icon svg { width: 18px; height: 18px; flex-shrink: 0; }
+.btn--icon:hover { color: var(--text); }
+.btn--star {
+  background: transparent;
+  border-color: var(--border);
+  color: #e3b341;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.btn--star:hover { background: rgba(227, 179, 65, 0.12); border-color: #e3b341; }
 
 .avatar-wrapper { display: flex; align-items: center; gap: 8px; }
 .avatar {
