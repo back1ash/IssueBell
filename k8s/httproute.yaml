@@ -1,0 +1,41 @@
+# ── HTTP → HTTPS redirect ─────────────────────────────────────────────────────
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: issuebell-redirect
+  namespace: issuebell
+spec:
+  parentRefs:
+  - name: prod-gateway
+    namespace: gateway
+    sectionName: http       # attach to the port-80 listener only
+  hostnames:
+  - "issuebell.com"
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+---
+# ── HTTPS → service ───────────────────────────────────────────────────────────
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: issuebell
+  namespace: issuebell
+spec:
+  parentRefs:
+  - name: prod-gateway
+    namespace: gateway
+    sectionName: https-issuebell   # attach to the issuebell HTTPS listener
+  hostnames:
+  - "issuebell.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: issuebell
+      port: 80
