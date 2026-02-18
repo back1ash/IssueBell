@@ -15,6 +15,10 @@ class User(Base):
     discord_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     username: Mapped[str] = mapped_column(String, nullable=False)
     avatar: Mapped[str | None] = mapped_column(String, nullable=True)
+    # GitHub OAuth
+    github_id: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
+    github_username: Mapped[str | None] = mapped_column(String, nullable=True)
+    github_token: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     subscriptions: Mapped[list["Subscription"]] = relationship(
@@ -34,8 +38,10 @@ class Subscription(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
     # e.g. "octocat/Hello-World"
     repo_full_name: Mapped[str] = mapped_column(String, nullable=False, index=True)
-    # e.g. "good first issue"
+    # regex pattern, e.g. "good.first.issue" or "help.*"
     label: Mapped[str] = mapped_column(String, nullable=False)
+    # timestamp of last successful poll for this subscription
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="subscriptions")

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: issuebell-config
+  namespace: issuebell
+data:
+  DATABASE_URL: "sqlite:////data/issuebell.db"
+  DISCORD_REDIRECT_URI: "https://issuebell.com/auth/callback"
+  GITHUB_REDIRECT_URI: "https://issuebell.com/auth/github/callback"
+  POLL_INTERVAL: "300"

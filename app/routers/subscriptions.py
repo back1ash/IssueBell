@@ -1,5 +1,7 @@
 """CRUD endpoints for subscriptions (requires login)."""
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -46,6 +48,7 @@ def create_subscription(
         user_id=current_user.id,
         repo_full_name=payload.repo_full_name,
         label=payload.label,
+        last_checked_at=datetime.utcnow(),
     )
     db.add(sub)
     try:

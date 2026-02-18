@@ -13,8 +13,13 @@ class Settings(BaseSettings):
     discord_client_secret: str = ""
     discord_redirect_uri: str = "http://localhost:8000/auth/callback"
 
-    # GitHub
-    github_webhook_secret: str = ""
+    # GitHub OAuth App
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_redirect_uri: str = "http://localhost:8000/auth/github/callback"
+
+    # Polling interval in seconds (default 5 min)
+    poll_interval: int = 300
 
 
 settings = Settings()

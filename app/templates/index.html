@@ -293,20 +293,15 @@
         {% endif %}
       </div>
 
-      <div class="panel panel--setup">
-        <h2 class="panel__title">Webhook Setup</h2>
-        <p class="setup-desc">For each GitHub repository you want to monitor, add a webhook:</p>
-        <ul class="setup-steps">
-          <li>Go to <strong>repository → Settings → Webhooks → Add webhook</strong></li>
-          <li>
-            Set <strong>Payload URL</strong> to:<br/>
-            <code class="code-block" id="webhook-url">{{ request.base_url }}webhook/github</code>
-          </li>
-          <li>Set <strong>Content type</strong> to <code>application/json</code></li>
-          <li>Set <strong>Secret</strong> to the value of <code>GITHUB_WEBHOOK_SECRET</code> from your <code>.env</code></li>
-          <li>Under <em>Which events?</em> choose <strong>Issues</strong> only</li>
-          <li>Click <strong>Add webhook</strong></li>
-        </ul>
+      <div class="panel panel--github">
+        <h2 class="panel__title">GitHub Account</h2>
+        {% if user.github_token %}
+          <p class="github-status">Connected as <strong>{{ user.github_username }}</strong> ✓</p>
+          <a href="/auth/github/disconnect" class="btn btn--ghost btn--sm" style="color:var(--danger,#dc2626);">Disconnect GitHub</a>
+        {% else %}
+          <p class="github-status">Connect your GitHub account so IssueBell can poll repos on your behalf.</p>
+          <a href="/auth/github" class="btn btn--primary">Connect GitHub</a>
+        {% endif %}
       </div>
     </div>
   </main>

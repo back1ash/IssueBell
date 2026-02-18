@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: issuebell
+  namespace: issuebell
+  labels:
+    app: issuebell
+spec:
+  replicas: 1
+  # Recreate: stop old pod before starting new one (SQLite can't be written by 2 pods)
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: issuebell
+  template:
+    metadata:
+      labels:
+        app: issuebell
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: issuebell
+          image: ghcr.io/back1ash/issuebell:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: issuebell-config
+            - secretRef:
+                name: issuebell-secret
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: issuebell-data
