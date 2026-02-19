@@ -9,5 +9,4 @@ resources:
   - pvc.yaml
   - deployment.yaml
   - service.yaml
-  - gateway.yaml
   - httproute.yaml

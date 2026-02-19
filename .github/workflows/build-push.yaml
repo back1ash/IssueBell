@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}   # back1ash/issuebell → ghcr.io/back1ash/issuebell
+  IMAGE_NAME: ${{ github.repository }}   # ghcr.io/back1ash/issuebell
 
 jobs:
   build-push:
