@@ -7,4 +7,4 @@ data:
   DISCORD_REDIRECT_URI: "https://issuebell.com/auth/callback"
   GITHUB_REDIRECT_URI: "https://issuebell.com/auth/github/callback"
   POLL_INTERVAL: "180"
-  ADMIN_DISCORD_ID: ""
+  ADMIN_DISCORD_ID: "270510544241295360"
