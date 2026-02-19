@@ -1,15 +1,42 @@
 /* IssueBell — dashboard interactions */
 
-// ─── Add Subscription ─────────────────────────────────────────────────────────
-const addForm = document.getElementById("add-form");
+// ─── Inputs ───────────────────────────────────────────────────────────────────
+const addForm   = document.getElementById("add-form");
 const formError = document.getElementById("form-error");
+const repoInput  = document.getElementById("repo");
+const labelInput = document.getElementById("label");
 
+// ─── Real-time repo format validation ─────────────────────────────────────────
+repoInput?.addEventListener("input", () => {
+  const val = repoInput.value.trim();
+  if (val.length === 0) {
+    repoInput.classList.remove("form-input--valid", "form-input--invalid");
+  } else if (/^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/.test(val)) {
+    repoInput.classList.add("form-input--valid");
+    repoInput.classList.remove("form-input--invalid");
+  } else {
+    repoInput.classList.add("form-input--invalid");
+    repoInput.classList.remove("form-input--valid");
+  }
+});
+
+// ─── Quick-pick label presets ─────────────────────────────────────────────────
+document.querySelectorAll(".label-preset-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (labelInput) {
+      labelInput.value = btn.dataset.label;
+      labelInput.focus();
+    }
+  });
+});
+
+// ─── Add Subscription ─────────────────────────────────────────────────────────
 addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.hidden = true;
 
-  const repo = document.getElementById("repo").value.trim();
-  const label = document.getElementById("label").value.trim();
+  const repo  = repoInput.value.trim();
+  const label = labelInput.value.trim();
 
   const submitBtn = addForm.querySelector("button[type=submit]");
   submitBtn.disabled = true;
@@ -29,7 +56,9 @@ addForm?.addEventListener("submit", async (e) => {
 
     const sub = await resp.json();
     appendSubItem(sub);
-    addForm.reset();
+    // Only clear the label so users can quickly add more labels to the same repo
+    labelInput.value = "";
+    labelInput.focus();
     updateBadge(+1);
     hideEmptyState();
   } catch (err) {
@@ -50,8 +79,16 @@ async function deleteSub(id, btn) {
     const resp = await fetch(`/subscriptions/${id}`, { method: "DELETE" });
     if (!resp.ok) throw new Error("Failed to remove");
 
-    const item = document.querySelector(`.sub-item[data-id="${id}"]`);
-    item?.remove();
+    const chip = document.querySelector(`.label-chip[data-id="${id}"]`);
+    if (chip) {
+      const group = chip.closest(".repo-group");
+      chip.remove();
+      // Remove the whole repo group if it has no labels left
+      if (group && group.querySelector(".repo-group__labels").children.length === 0) {
+        group.remove();
+      }
+    }
+
     updateBadge(-1);
     checkEmptyState();
   } catch (err) {
@@ -61,33 +98,45 @@ async function deleteSub(id, btn) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+function createLabelChip(sub) {
+  const chip = document.createElement("span");
+  chip.className = "label-chip";
+  chip.dataset.id = sub.id;
+  chip.innerHTML = `<span class="label-chip__text">${escHtml(sub.label)}</span><button class="label-chip__remove" onclick="deleteSub(${sub.id}, this)" title="Remove">×</button>`;
+  return chip;
+}
+
 function appendSubItem(sub) {
   let list = document.getElementById("sub-list");
 
   if (!list) {
-    // Create the list if it didn't exist (first item)
     list = document.createElement("ul");
     list.id = "sub-list";
     list.className = "sub-list";
-    const panel = document.querySelector(".panel--subs");
-    panel.appendChild(list);
+    document.querySelector(".panel--subs").appendChild(list);
   }
 
+  // Add to existing repo group if present
+  const safeRepo = sub.repo_full_name.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const existing = list.querySelector(`.repo-group[data-repo="${safeRepo}"]`);
+  if (existing) {
+    existing.querySelector(".repo-group__labels").appendChild(createLabelChip(sub));
+    return;
+  }
+
+  // Create a new repo group
   const li = document.createElement("li");
-  li.className = "sub-item";
-  li.dataset.id = sub.id;
+  li.className = "repo-group";
+  li.dataset.repo = sub.repo_full_name;
   li.innerHTML = `
-    <div class="sub-item__info">
-      <a class="sub-item__repo"
-         href="https://github.com/${sub.repo_full_name}"
-         target="_blank" rel="noopener">
-        ${escHtml(sub.repo_full_name)}
-      </a>
-      <span class="sub-item__label">${escHtml(sub.label)}</span>
+    <div class="repo-group__header">
+      <a class="repo-group__name"
+         href="https://github.com/${escHtml(sub.repo_full_name)}"
+         target="_blank" rel="noopener">${escHtml(sub.repo_full_name)}</a>
     </div>
-    <button class="btn btn--ghost btn--sm btn--danger"
-            onclick="deleteSub(${sub.id}, this)">Remove</button>
+    <div class="repo-group__labels"></div>
   `;
+  li.querySelector(".repo-group__labels").appendChild(createLabelChip(sub));
   list.prepend(li);
 }
 

@@ -275,6 +275,14 @@
               <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
               <input id="label" class="form-input" type="text" placeholder="good-first-issue" required />
               <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
+              <div class="label-presets">
+                <span class="label-presets__hint">Quick picks:</span>
+                <button type="button" class="label-preset-btn" data-label="bug">bug</button>
+                <button type="button" class="label-preset-btn" data-label="good first issue">good first issue</button>
+                <button type="button" class="label-preset-btn" data-label="help wanted">help wanted</button>
+                <button type="button" class="label-preset-btn" data-label="enhancement">enhancement</button>
+                <button type="button" class="label-preset-btn" data-label="documentation">documentation</button>
+              </div>
             </div>
             <button type="submit" class="btn btn--primary btn--full">+ Add Subscription</button>
             <p id="form-error" class="form-error" hidden></p>
@@ -289,15 +297,20 @@
         </h2>
         {% if subscriptions %}
           <ul id="sub-list" class="sub-list">
-            {% for sub in subscriptions %}
-              <li class="sub-item" data-id="{{ sub.id }}">
-                <div class="sub-item__info">
-                  <a class="sub-item__repo" href="https://github.com/{{ sub.repo_full_name }}"
-                    target="_blank" rel="noopener">{{ sub.repo_full_name }}</a>
-                  <span class="sub-item__label">{{ sub.label }}</span>
+            {% for repo, subs in subscriptions | groupby('repo_full_name') %}
+              <li class="repo-group" data-repo="{{ repo }}">
+                <div class="repo-group__header">
+                  <a class="repo-group__name" href="https://github.com/{{ repo }}"
+                    target="_blank" rel="noopener">{{ repo }}</a>
                 </div>
-                <button class="btn btn--ghost btn--sm btn--danger"
-                  onclick="deleteSub({{ sub.id }}, this)">Remove</button>
+                <div class="repo-group__labels">
+                  {% for sub in subs %}
+                    <span class="label-chip" data-id="{{ sub.id }}">
+                      <span class="label-chip__text">{{ sub.label }}</span>
+                      <button class="label-chip__remove" onclick="deleteSub({{ sub.id }}, this)" title="Remove">×</button>
+                    </span>
+                  {% endfor %}
+                </div>
               </li>
             {% endfor %}
           </ul>
