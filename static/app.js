@@ -6,12 +6,27 @@ const formError = document.getElementById("form-error");
 const repoInput  = document.getElementById("repo");
 const labelInput = document.getElementById("label");
 
-// ─── Real-time repo format validation ─────────────────────────────────────────
+// ─── Repo input parsing ───────────────────────────────────────────────────────────────────
+// Accepts: owner/repo  OR  https://github.com/owner/repo[.git]  OR  git@github.com:owner/repo[.git]
+function parseRepo(raw) {
+  const s = raw.trim();
+  // HTTPS URL: https://github.com/owner/repo or https://github.com/owner/repo.git
+  const httpsMatch = s.match(/^https?:\/\/github\.com\/([A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+?)(\.git)?(?:\/.*)?$/);
+  if (httpsMatch) return httpsMatch[1];
+  // SSH URL: git@github.com:owner/repo.git
+  const sshMatch = s.match(/^git@github\.com:([A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+?)(\.git)?$/);
+  if (sshMatch) return sshMatch[1];
+  // Plain owner/repo
+  if (/^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/.test(s)) return s;
+  return null;
+}
+
+// ─── Real-time repo format validation ─────────────────────────────────────────────────────
 repoInput?.addEventListener("input", () => {
   const val = repoInput.value.trim();
   if (val.length === 0) {
     repoInput.classList.remove("form-input--valid", "form-input--invalid");
-  } else if (/^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/.test(val)) {
+  } else if (parseRepo(val) !== null) {
     repoInput.classList.add("form-input--valid");
     repoInput.classList.remove("form-input--invalid");
   } else {
@@ -35,7 +50,7 @@ addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.hidden = true;
 
-  const repo  = repoInput.value.trim();
+  const repo  = parseRepo(repoInput.value) ?? repoInput.value.trim();
   const label = labelInput.value.trim();
 
   const submitBtn = addForm.querySelector("button[type=submit]");
