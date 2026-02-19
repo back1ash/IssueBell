@@ -1,27 +1,27 @@
-/* IssueBell — dashboard interactions */
+﻿/* IssueBell - dashboard interactions */
 
-// ─── Inputs ───────────────────────────────────────────────────────────────────
-const addForm   = document.getElementById("add-form");
-const formError = document.getElementById("form-error");
+// --- Inputs ------------------------------------------------------------------
+const addForm    = document.getElementById("add-form");
+const formError  = document.getElementById("form-error");
 const repoInput  = document.getElementById("repo");
 const labelInput = document.getElementById("label");
+const tagInputEl = document.getElementById("label-tag-input");
 
-// ─── Repo input parsing ───────────────────────────────────────────────────────────────────
-// Accepts: owner/repo  OR  https://github.com/owner/repo[.git]  OR  git@github.com:owner/repo[.git]
+// pending labels (not yet submitted)
+let pendingLabels = [];
+
+// --- Repo input parsing ------------------------------------------------------
 function parseRepo(raw) {
   const s = raw.trim();
-  // HTTPS URL: https://github.com/owner/repo or https://github.com/owner/repo.git
   const httpsMatch = s.match(/^https?:\/\/github\.com\/([A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+?)(\.git)?(?:\/.*)?$/);
   if (httpsMatch) return httpsMatch[1];
-  // SSH URL: git@github.com:owner/repo.git
   const sshMatch = s.match(/^git@github\.com:([A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+?)(\.git)?$/);
   if (sshMatch) return sshMatch[1];
-  // Plain owner/repo
   if (/^[A-Za-z0-9_.\-]+\/[A-Za-z0-9_.\-]+$/.test(s)) return s;
   return null;
 }
 
-// ─── Real-time repo format validation ─────────────────────────────────────────────────────
+// --- Real-time repo format validation ----------------------------------------
 repoInput?.addEventListener("input", () => {
   const val = repoInput.value.trim();
   if (val.length === 0) {
@@ -35,57 +35,116 @@ repoInput?.addEventListener("input", () => {
   }
 });
 
-// ─── Quick-pick label presets ─────────────────────────────────────────────────
+// --- Pending label chips (multi-label input) ---------------------------------
+function renderPendingChips() {
+  tagInputEl?.querySelectorAll(".tag-chip").forEach((el) => el.remove());
+  pendingLabels.forEach((lbl, i) => {
+    const chip = document.createElement("span");
+    chip.className = "tag-chip";
+    chip.innerHTML =
+      `<span class="tag-chip__text">${escHtml(lbl)}</span>` +
+      `<button type="button" class="tag-chip__remove" aria-label="Remove">x</button>`;
+    chip.querySelector(".tag-chip__remove").addEventListener("click", () => {
+      pendingLabels.splice(i, 1);
+      renderPendingChips();
+    });
+    tagInputEl.insertBefore(chip, labelInput);
+  });
+  if (labelInput) labelInput.placeholder = pendingLabels.length ? "" : "good-first-issue";
+}
+
+function addPendingLabel(raw) {
+  const val = raw.trim();
+  if (!val) return;
+  if (pendingLabels.includes(val)) { if (labelInput) labelInput.value = ""; return; }
+  pendingLabels.push(val);
+  renderPendingChips();
+  if (labelInput) labelInput.value = "";
+}
+
+// Comma or Enter inside label field -> commit to chip
+labelInput?.addEventListener("keydown", (e) => {
+  if (e.key === "," || e.key === "Enter") {
+    e.preventDefault();
+    addPendingLabel(labelInput.value);
+  } else if (e.key === "Backspace" && labelInput.value === "" && pendingLabels.length) {
+    pendingLabels.pop();
+    renderPendingChips();
+  }
+});
+
+// Commit on blur so pasted values are not lost
+labelInput?.addEventListener("blur", () => {
+  if (labelInput.value.trim()) addPendingLabel(labelInput.value);
+});
+
+// Quick-pick -> add directly as pending chip
 document.querySelectorAll(".label-preset-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    if (labelInput) {
-      labelInput.value = btn.dataset.label;
-      labelInput.focus();
-    }
+    addPendingLabel(btn.dataset.label);
+    labelInput?.focus();
   });
 });
 
-// ─── Add Subscription ─────────────────────────────────────────────────────────
+// --- Add Subscription --------------------------------------------------------
 addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   formError.hidden = true;
 
-  const repo  = parseRepo(repoInput.value) ?? repoInput.value.trim();
-  const label = labelInput.value.trim();
+  // If the user typed something without pressing comma, treat it as a label too
+  if (labelInput.value.trim()) addPendingLabel(labelInput.value);
+
+  const labels = [...pendingLabels];
+  if (labels.length === 0) {
+    formError.textContent = "Add at least one label.";
+    formError.hidden = false;
+    return;
+  }
+
+  const repo = parseRepo(repoInput.value) ?? repoInput.value.trim();
 
   const submitBtn = addForm.querySelector("button[type=submit]");
   submitBtn.disabled = true;
-  submitBtn.textContent = "Adding…";
+  submitBtn.textContent = "Adding...";
 
-  try {
-    const resp = await fetch("/subscriptions/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repo_full_name: repo, label }),
-    });
-
-    if (!resp.ok) {
-      const data = await resp.json();
-      throw new Error(data.detail ?? "Failed to add subscription");
+  const errors = [];
+  for (const label of labels) {
+    try {
+      const resp = await fetch("/subscriptions/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo_full_name: repo, label }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json();
+        errors.push(`"${label}": ${data.detail ?? "failed"}`);
+        continue;
+      }
+      const sub = await resp.json();
+      appendSubItem(sub);
+      updateBadge(+1);
+      hideEmptyState();
+    } catch (err) {
+      errors.push(`"${label}": ${err.message}`);
     }
-
-    const sub = await resp.json();
-    appendSubItem(sub);
-    // Only clear the label so users can quickly add more labels to the same repo
-    labelInput.value = "";
-    labelInput.focus();
-    updateBadge(+1);
-    hideEmptyState();
-  } catch (err) {
-    formError.textContent = err.message;
-    formError.hidden = false;
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "+ Add Subscription";
   }
+
+  // Keep only failed labels in pending; clear the rest
+  const failedLabels = errors.map((e) => e.match(/"(.+?)"/)?.[1]).filter(Boolean);
+  pendingLabels = labels.filter((l) => failedLabels.includes(l));
+  renderPendingChips();
+  labelInput?.focus();
+
+  if (errors.length) {
+    formError.textContent = errors.join(" / ");
+    formError.hidden = false;
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = "+ Add Subscription";
 });
 
-// ─── Delete Subscription ──────────────────────────────────────────────────────
+// --- Delete Subscription -----------------------------------------------------
 async function deleteSub(id, btn) {
   if (!confirm("Remove this subscription?")) return;
   btn.disabled = true;
@@ -98,7 +157,6 @@ async function deleteSub(id, btn) {
     if (chip) {
       const group = chip.closest(".repo-group");
       chip.remove();
-      // Remove the whole repo group if it has no labels left
       if (group && group.querySelector(".repo-group__labels").children.length === 0) {
         group.remove();
       }
@@ -112,12 +170,14 @@ async function deleteSub(id, btn) {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers -----------------------------------------------------------------
 function createLabelChip(sub) {
   const chip = document.createElement("span");
   chip.className = "label-chip";
   chip.dataset.id = sub.id;
-  chip.innerHTML = `<span class="label-chip__text">${escHtml(sub.label)}</span><button class="label-chip__remove" onclick="deleteSub(${sub.id}, this)" title="Remove">×</button>`;
+  chip.innerHTML =
+    `<span class="label-chip__text">${escHtml(sub.label)}</span>` +
+    `<button class="label-chip__remove" onclick="deleteSub(${sub.id}, this)" title="Remove">x</button>`;
   return chip;
 }
 
@@ -131,15 +191,13 @@ function appendSubItem(sub) {
     document.querySelector(".panel--subs").appendChild(list);
   }
 
-  // Add to existing repo group if present
-  const safeRepo = sub.repo_full_name.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const safeRepo = sub.repo_full_name.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
   const existing = list.querySelector(`.repo-group[data-repo="${safeRepo}"]`);
   if (existing) {
     existing.querySelector(".repo-group__labels").appendChild(createLabelChip(sub));
     return;
   }
 
-  // Create a new repo group
   const li = document.createElement("li");
   li.className = "repo-group";
   li.dataset.repo = sub.repo_full_name;
@@ -174,7 +232,7 @@ function checkEmptyState() {
     empty.id = "empty-state";
     empty.className = "empty-state";
     empty.innerHTML = `
-      <span class="empty-state__icon">🔕</span>
+      <span class="empty-state__icon">&#x1F515;</span>
       <p>No subscriptions yet.<br/>Add one above to start receiving notifications.</p>
     `;
     panel.appendChild(empty);

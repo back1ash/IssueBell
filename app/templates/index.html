@@ -272,9 +272,12 @@
               <span class="form-hint">e.g. <code>facebook/react</code> or <code>https://github.com/facebook/react</code></span>
             </div>
             <div class="form-group">
-              <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
-              <input id="label" class="form-input" type="text" placeholder="good-first-issue" required />
-              <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
+              <label class="form-label">Label <span class="badge-regex">regex</span></label>
+              <div id="label-tag-input" class="tag-input" onclick="this.querySelector('.tag-input__field').focus()">
+                <input id="label" class="tag-input__field" type="text"
+                  placeholder="good-first-issue" autocomplete="off" />
+              </div>
+              <span class="form-hint">Type and press <kbd>,</kbd> or <kbd>Enter↵</kbd> to add multiple. Regex supported.</span>
               <div class="label-presets">
                 <span class="label-presets__hint">Quick picks:</span>
                 <button type="button" class="label-preset-btn" data-label="bug">bug</button>
