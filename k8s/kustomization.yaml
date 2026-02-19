@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: issuebell
-
 resources:
   - namespace.yaml
   - configmap.yaml
@@ -10,5 +8,6 @@ resources:
   - deployment.yaml
   - service.yaml
   - httproute.yaml
-  # cluster-issuer.yaml and certificate.yaml are applied separately
-  # (they must live in 'gateway' namespace, not 'issuebell')
+  - referencegrant.yaml
+  - cluster-issuer.yaml
+  - certificate.yaml
