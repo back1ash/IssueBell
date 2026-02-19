@@ -318,6 +318,7 @@ code {
   position: absolute;
   inset: 0;
   z-index: 10;
+  grid-column: 1 / -1;
   background: rgba(248, 249, 255, 0.75);
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
