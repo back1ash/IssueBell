@@ -7,9 +7,11 @@ metadata:
     app: issuebell
 spec:
   replicas: 1
-  # Recreate: stop old pod before starting new one (SQLite can't be written by 2 pods)
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: issuebell
@@ -34,9 +36,6 @@ spec:
                 name: issuebell-config
             - secretRef:
                 name: issuebell-secret
-          volumeMounts:
-            - name: data
-              mountPath: /data
           resources:
             requests:
               cpu: 50m
@@ -48,16 +47,12 @@ spec:
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 5
             periodSeconds: 30
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /
               port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: issuebell-data
+            initialDelaySeconds: 2
+            periodSeconds: 5
