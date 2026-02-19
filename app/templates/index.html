@@ -252,38 +252,37 @@
         {% endif %}
       </div>
 
-      <!-- ── GitHub 미연동 시 안내 배너 ───────────────────────────── -->
-      {% if not user.github_token %}
-        <div class="alert alert--warn" style="margin-bottom:0;">
-          <strong>⚠️ GitHub 연동이 필요합니다</strong> — 위에서 GitHub 계정을 먼저 연결해야 구독을 추가하고 알림을 받을 수 있습니다.
+      <!-- ── Subscription panels wrapper (overlay when GitHub not connected) ── -->
+      <div class="panel-group{% if not user.github_token %} panel-group--locked{% endif %}">
+
+        {% if not user.github_token %}
+          <div class="panel-group__overlay">
+            <p>🔗 Connect your GitHub account above to add subscriptions and receive notifications.</p>
+          </div>
+        {% endif %}
+
+        <!-- ── Add Subscription ──────────────────────────────────────── -->
+        <div class="panel">
+          <h2 class="panel__title">Add Subscription</h2>
+          <form id="add-form" class="add-form">
+            <div class="form-group">
+              <label class="form-label" for="repo">Repository</label>
+              <input id="repo" class="form-input" type="text" placeholder="owner/repo-name"
+                required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" />
+              <span class="form-hint">e.g. <code>facebook/react</code></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
+              <input id="label" class="form-input" type="text" placeholder="good-first-issue" required />
+              <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
+            </div>
+            <button type="submit" class="btn btn--primary btn--full">+ Add Subscription</button>
+            <p id="form-error" class="form-error" hidden></p>
+          </form>
         </div>
-      {% endif %}
 
-      <!-- ── Add Subscription ──────────────────────────────────────── -->
-      <div class="panel{% if not user.github_token %} panel--disabled{% endif %}">
-        <h2 class="panel__title">Add Subscription</h2>
-        <form id="add-form" class="add-form">
-          <div class="form-group">
-            <label class="form-label" for="repo">Repository</label>
-            <input id="repo" class="form-input" type="text" placeholder="owner/repo-name"
-              required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"
-              {% if not user.github_token %}disabled{% endif %} />
-            <span class="form-hint">e.g. <code>facebook/react</code></span>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
-            <input id="label" class="form-input" type="text" placeholder="good-first-issue"
-              required {% if not user.github_token %}disabled{% endif %} />
-            <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
-          </div>
-          <button type="submit" class="btn btn--primary btn--full"
-            {% if not user.github_token %}disabled{% endif %}>+ Add Subscription</button>
-          <p id="form-error" class="form-error" hidden></p>
-        </form>
-      </div>
-
-      <!-- ── My Subscriptions ──────────────────────────────────────── -->
-      <div class="panel panel--subs{% if not user.github_token %} panel--disabled{% endif %}">
+        <!-- ── My Subscriptions ──────────────────────────────────────── -->
+        <div class="panel panel--subs">
         <h2 class="panel__title">
           My Subscriptions
           <span class="badge">{{ subscriptions | length }}</span>
@@ -308,7 +307,9 @@
             <p>No subscriptions yet.<br/>Add one above to start receiving notifications.</p>
           </div>
         {% endif %}
-      </div>
+      </div><!-- /panel panel--subs -->
+
+      </div><!-- /panel-group -->
 
     </div>
   </main>

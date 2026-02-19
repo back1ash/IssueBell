@@ -302,6 +302,36 @@ code {
   user-select: none;
 }
 
+/* Subscription panel group with overlay */
+.panel-group {
+  display: contents; /* children participate in parent grid as-is */
+}
+.panel-group--locked {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  position: relative;
+  align-items: start;
+}
+.panel-group__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(248, 249, 255, 0.75);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary, #475569);
+}
+
 .panel__title {
   font-size: 0.95rem;
   font-weight: 700;
@@ -501,6 +531,7 @@ code {
 @media (max-width: 720px) {
   .dashboard { grid-template-columns: 1fr; }
   .panel--github { grid-column: 1; }
+  .panel-group--locked { grid-template-columns: 1fr; }
   .navbar { padding: 0 16px; }
   .hero { padding: 52px 16px 44px; }
   .hero__title { font-size: clamp(1.8rem, 8vw, 2.4rem); }
@@ -558,6 +589,7 @@ html.is-landing {
   align-items: center;
   gap: 0;
   max-width: 640px;
+  margin-top: -30px; /* visually center relative to full viewport, not just below navbar */
 }
 
 .hero__eyebrow {
