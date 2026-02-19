@@ -239,26 +239,51 @@
 
   <main class="container">
     <div class="dashboard">
-      <div class="panel">
+
+      <!-- ── GitHub Account (항상 최상단) ─────────────────────────── -->
+      <div class="panel panel--github">
+        <h2 class="panel__title">GitHub Account</h2>
+        {% if user.github_token %}
+          <p class="github-status">Connected as <strong>{{ user.github_username }}</strong> ✓</p>
+          <a href="/auth/github/disconnect" class="btn btn--ghost btn--sm" style="color:var(--danger,#dc2626);">Disconnect GitHub</a>
+        {% else %}
+          <p class="github-status">Connect your GitHub account so IssueBell can poll repos on your behalf.</p>
+          <a href="/auth/github" class="btn btn--primary">Connect GitHub</a>
+        {% endif %}
+      </div>
+
+      <!-- ── GitHub 미연동 시 안내 배너 ───────────────────────────── -->
+      {% if not user.github_token %}
+        <div class="alert alert--warn" style="margin-bottom:0;">
+          <strong>⚠️ GitHub 연동이 필요합니다</strong> — 위에서 GitHub 계정을 먼저 연결해야 구독을 추가하고 알림을 받을 수 있습니다.
+        </div>
+      {% endif %}
+
+      <!-- ── Add Subscription ──────────────────────────────────────── -->
+      <div class="panel{% if not user.github_token %} panel--disabled{% endif %}">
         <h2 class="panel__title">Add Subscription</h2>
         <form id="add-form" class="add-form">
           <div class="form-group">
             <label class="form-label" for="repo">Repository</label>
             <input id="repo" class="form-input" type="text" placeholder="owner/repo-name"
-              required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" />
+              required pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+"
+              {% if not user.github_token %}disabled{% endif %} />
             <span class="form-hint">e.g. <code>facebook/react</code></span>
           </div>
           <div class="form-group">
             <label class="form-label" for="label">Label <span class="badge-regex">regex</span></label>
-            <input id="label" class="form-input" type="text" placeholder="good-first-issue" required />
+            <input id="label" class="form-input" type="text" placeholder="good-first-issue"
+              required {% if not user.github_token %}disabled{% endif %} />
             <span class="form-hint">Exact name or regex — e.g. <code>bug</code>, <code>good.first.issue</code>, <code>help.*</code></span>
           </div>
-          <button type="submit" class="btn btn--primary btn--full">+ Add Subscription</button>
+          <button type="submit" class="btn btn--primary btn--full"
+            {% if not user.github_token %}disabled{% endif %}>+ Add Subscription</button>
           <p id="form-error" class="form-error" hidden></p>
         </form>
       </div>
 
-      <div class="panel panel--subs">
+      <!-- ── My Subscriptions ──────────────────────────────────────── -->
+      <div class="panel panel--subs{% if not user.github_token %} panel--disabled{% endif %}">
         <h2 class="panel__title">
           My Subscriptions
           <span class="badge">{{ subscriptions | length }}</span>
@@ -285,16 +310,6 @@
         {% endif %}
       </div>
 
-      <div class="panel panel--github">
-        <h2 class="panel__title">GitHub Account</h2>
-        {% if user.github_token %}
-          <p class="github-status">Connected as <strong>{{ user.github_username }}</strong> ✓</p>
-          <a href="/auth/github/disconnect" class="btn btn--ghost btn--sm" style="color:var(--danger,#dc2626);">Disconnect GitHub</a>
-        {% else %}
-          <p class="github-status">Connect your GitHub account so IssueBell can poll repos on your behalf.</p>
-          <a href="/auth/github" class="btn btn--primary">Connect GitHub</a>
-        {% endif %}
-      </div>
     </div>
   </main>
 

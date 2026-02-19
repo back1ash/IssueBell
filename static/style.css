@@ -296,6 +296,12 @@ code {
 .panel--github { grid-column: 1 / -1; }
 .github-status { margin-bottom: .75rem; color: var(--text-secondary, #64748b); }
 
+.panel--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  user-select: none;
+}
+
 .panel__title {
   font-size: 0.95rem;
   font-weight: 700;
