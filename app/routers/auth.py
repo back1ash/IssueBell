@@ -39,6 +39,7 @@ async def discord_login(request: Request):
         "response_type": "code",
         "scope": DISCORD_SCOPES,
         "state": state,
+        "prompt": "none",       # skip consent screen if already authorized
         "integration_type": 1,  # 0 = guild install, 1 = user install (allows DM without shared server)
     }
     return RedirectResponse(f"https://discord.com/oauth2/authorize?{urlencode(params)}")
