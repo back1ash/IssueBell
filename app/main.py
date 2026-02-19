@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.database import SessionLocal, engine
 from app.models import Base, Subscription, User
-from app.routers import auth, subscriptions
+from app.routers import auth, subscriptions, webhook
 from app.services.discord import send_dm
 from app.services.github import build_issue_message, fetch_new_issues, match_label
 
@@ -105,6 +105,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 app.include_router(auth.router)
 app.include_router(subscriptions.router)
+app.include_router(webhook.router)
 
 
 # ── Web UI ───────────────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 DISCORD_API = "https://discord.com/api/v10"
 GITHUB_API  = "https://api.github.com"
-DISCORD_SCOPES = "identify"
+DISCORD_SCOPES = "identify applications.commands"
 GITHUB_SCOPES  = "read:user"       # only needed for profile; public repo access needs no scope
 STATE_MAX_AGE  = 600               # 10 minutes
 
@@ -39,6 +39,7 @@ async def discord_login(request: Request):
         "response_type": "code",
         "scope": DISCORD_SCOPES,
         "state": state,
+        "integration_type": 1,  # 0 = guild install, 1 = user install (allows DM without shared server)
     }
     return RedirectResponse(f"https://discord.com/oauth2/authorize?{urlencode(params)}")
 
