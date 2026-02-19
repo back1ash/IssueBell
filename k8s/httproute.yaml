@@ -1,28 +1,7 @@
-# ── HTTP → HTTPS redirect ─────────────────────────────────────────────────────
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: issuebell-redirect
-  namespace: issuebell
-spec:
-  parentRefs:
-  - name: prod-gateway
-    namespace: gateway
-    sectionName: http       # attach to the port-80 listener only
-  hostnames:
-  - "issuebell.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    filters:
-    - type: RequestRedirect
-      requestRedirect:
-        scheme: https
-        statusCode: 301
+# TLS is terminated at the gateway with a Cloudflare Origin Certificate (Full Strict mode).
+# Cloudflare <-> origin communication is encrypted on port 443.
+# HTTP -> HTTPS redirect is handled by Cloudflare "Always Use HTTPS" setting.
 ---
-# ── HTTPS → service ───────────────────────────────────────────────────────────
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -32,7 +11,7 @@ spec:
   parentRefs:
   - name: prod-gateway
     namespace: gateway
-    sectionName: https-issuebell   # attach to the issuebell HTTPS listener
+    sectionName: https-issuebell   # HTTPS listener with Cloudflare Origin Cert
   hostnames:
   - "issuebell.com"
   rules:
