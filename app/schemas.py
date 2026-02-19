@@ -29,6 +29,11 @@ class SubscriptionCreate(BaseModel):
     )
     label: str = Field(..., min_length=1, max_length=200, examples=["good-first-issue"])
 
+    @field_validator("repo_full_name")
+    @classmethod
+    def normalize_repo(cls, v: str) -> str:
+        return v.lower()
+
     @field_validator("label")
     @classmethod
     def label_must_be_valid_regex(cls, v: str) -> str:
