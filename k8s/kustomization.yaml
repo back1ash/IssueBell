@@ -9,5 +9,3 @@ resources:
   - service.yaml
   - httproute.yaml
   - referencegrant.yaml
-  - cluster-issuer.yaml
-  - certificate.yaml
