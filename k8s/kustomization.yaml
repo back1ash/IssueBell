@@ -6,7 +6,6 @@ namespace: issuebell
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secret.yaml
   - pvc.yaml
   - deployment.yaml
   - service.yaml
