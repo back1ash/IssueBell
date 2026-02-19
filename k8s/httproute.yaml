@@ -12,7 +12,11 @@ spec:
   hostnames:
   - "issuebell.com"
   rules:
-  - filters:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
     - type: RequestRedirect
       requestRedirect:
         scheme: https
