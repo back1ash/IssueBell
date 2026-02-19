@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.database import SessionLocal, engine
 from app.models import Base, Subscription, User
-from app.routers import auth, subscriptions, webhook
+from app.routers import admin, auth, subscriptions, webhook
 from app.services.discord import send_dm
 from app.services.github import build_issue_message, fetch_new_issues, match_label
 
@@ -106,6 +106,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(auth.router)
 app.include_router(subscriptions.router)
 app.include_router(webhook.router)
+app.include_router(admin.router)
 
 
 # ── Web UI ───────────────────────────────────────────────────────────────────
@@ -134,3 +135,18 @@ async def index(request: Request):
         "index.html",
         {"request": request, "user": user, "subscriptions": subs},
     )
+
+
+@app.get("/manage", response_class=HTMLResponse)
+async def manage(request: Request):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/")
+    db: Session = SessionLocal()
+    try:
+        user = db.get(User, user_id)
+        if user is None or user.discord_id != settings.admin_discord_id:
+            return RedirectResponse(url="/")
+    finally:
+        db.close()
+    return templates.TemplateResponse("manage.html", {"request": request, "user": user})

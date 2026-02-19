@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     # App
     secret_key: str = "dev-secret-key-change-in-production"
+    # Discord ID of the admin user (set via env var ADMIN_DISCORD_ID)
+    admin_discord_id: str = ""
 
     # Database
     database_url: str = "sqlite:////data/issuebell.db"

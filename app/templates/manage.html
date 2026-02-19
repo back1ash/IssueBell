@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IssueBell — Manage</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    /* ── Admin-specific styles ───────────────────────────────────── */
+    .admin-wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .admin-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .admin-title span {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-left: 10px;
+    }
+    .search-box {
+      display: flex;
+      gap: 8px;
+    }
+    .search-input {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      font-size: 0.875rem;
+      color: var(--text);
+      outline: none;
+      width: 240px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    /* ── User table ─────────────────────────────────────────────── */
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    .user-table th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+      background: var(--surface-2);
+    }
+    .user-table th:first-child { border-radius: 10px 0 0 0; }
+    .user-table th:last-child  { border-radius: 0 10px 0 0; }
+
+    .user-row {
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .user-row:hover { background: var(--surface-2); }
+    .user-row.expanded { background: var(--label-bg); }
+    .user-row td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    .user-avatar--placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: var(--label-bg);
+      color: var(--accent);
+    }
+    .tag--green { background: rgba(34,197,94,0.12); color: #15803d; }
+    .tag--gray  { background: var(--surface-2); color: var(--text-muted); }
+
+    .expand-icon {
+      display: inline-block;
+      transition: transform 0.2s;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+    .expanded .expand-icon { transform: rotate(90deg); }
+
+    /* ── Subscription sub-rows ──────────────────────────────────── */
+    .sub-rows td {
+      padding: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sub-rows-inner {
+      padding: 10px 14px 14px 56px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sub-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+    .sub-entry__repo {
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .sub-entry__label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      background: #ede9fe;
+      color: #5b21b6;
+      border-radius: 999px;
+      padding: 1px 9px;
+    }
+    .sub-entry__date {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      margin-left: auto;
+    }
+    .sub-empty {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-style: italic;
+    }
+
+    .stat-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      box-shadow: var(--shadow-sm);
+      flex: 1;
+    }
+    .stat-card__label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-card__value { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
+
+    .empty-admin {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- ── Navbar ─────────────────────────────────────────────────── -->
+  <header class="navbar">
+    <div class="navbar__brand">
+      <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
+        <img src="/static/logo.png" alt="IssueBell" class="navbar__logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <span class="navbar__logo-fallback"><span class="navbar__bell">🔔</span><span class="navbar__title">IssueBell</span></span>
+      </a>
+      <span style="font-size:0.75rem;font-weight:700;color:var(--accent);background:var(--label-bg);padding:3px 10px;border-radius:999px;letter-spacing:0.06em;">ADMIN</span>
+    </div>
+    <nav class="navbar__actions">
+      <div class="avatar-wrapper">
+        {% if user.avatar %}
+          <img class="avatar" src="https://cdn.discordapp.com/avatars/{{ user.discord_id }}/{{ user.avatar }}.png?size=64" alt="{{ user.username }}" />
+        {% else %}
+          <div class="avatar avatar--placeholder">{{ user.username[0] | upper }}</div>
+        {% endif %}
+        <span class="username">{{ user.username }}</span>
+      </div>
+      <a href="/" class="btn btn--ghost btn--sm">← Dashboard</a>
+      <a href="/auth/logout" class="btn btn--ghost btn--sm">Logout</a>
+    </nav>
+  </header>
+
+  <div class="admin-wrap">
+    <!-- ── Stats ──────────────────────────────────────────────── -->
+    <div class="stat-bar" id="stat-bar">
+      <div class="stat-card">
+        <div class="stat-card__label">Total Users</div>
+        <div class="stat-card__value" id="stat-users">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">GitHub Connected</div>
+        <div class="stat-card__value" id="stat-github">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__label">Total Subscriptions</div>
+        <div class="stat-card__value" id="stat-subs">—</div>
+      </div>
+    </div>
+
+    <!-- ── Header + Search ───────────────────────────────────── -->
+    <div class="admin-header">
+      <div class="admin-title">Users <span id="result-count"></span></div>
+      <div class="search-box">
+        <input class="search-input" id="search" type="search" placeholder="Search by username…" autocomplete="off" />
+      </div>
+    </div>
+
+    <!-- ── Table ──────────────────────────────────────────────── -->
+    <div class="table-wrap">
+      <table class="user-table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>GitHub</th>
+            <th>Subscriptions</th>
+            <th>Joined</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="user-tbody">
+          <tr><td colspan="5" class="empty-admin">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let allUsers = [];
+
+    async function loadUsers(q = '') {
+      const url = '/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : '');
+      const res = await fetch(url);
+      if (res.status === 403) {
+        document.getElementById('user-tbody').innerHTML =
+          '<tr><td colspan="5" class="empty-admin">⛔ Access denied.</td></tr>';
+        return;
+      }
+      allUsers = await res.json();
+      renderUsers(allUsers);
+      updateStats(allUsers);
+    }
+
+    function updateStats(users) {
+      document.getElementById('stat-users').textContent = users.length;
+      document.getElementById('stat-github').textContent = users.filter(u => u.github_connected).length;
+      document.getElementById('stat-subs').textContent = users.reduce((a, u) => a + u.subscriptions.length, 0);
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function renderUsers(users) {
+      const tbody = document.getElementById('user-tbody');
+      document.getElementById('result-count').textContent = users.length > 0 ? `(${users.length})` : '';
+
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-admin">No users found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      users.forEach(u => {
+        const avatarHtml = u.avatar
+          ? `<img class="user-avatar" src="https://cdn.discordapp.com/avatars/${u.discord_id}/${u.avatar}.png?size=64" />`
+          : `<span class="user-avatar--placeholder">${u.username[0].toUpperCase()}</span>`;
+
+        const githubHtml = u.github_connected
+          ? `<span class="tag tag--green">✓ ${u.github_username ?? ''}</span>`
+          : `<span class="tag tag--gray">Not connected</span>`;
+
+        const subCount = u.subscriptions.length;
+        const subBadge = subCount > 0
+          ? `<span class="badge">${subCount}</span>`
+          : `<span style="color:var(--text-muted);font-size:0.82rem">0</span>`;
+
+        // User row
+        const tr = document.createElement('tr');
+        tr.className = 'user-row';
+        tr.dataset.id = u.id;
+        tr.innerHTML = `
+          <td>${avatarHtml}<strong>${u.username}</strong></td>
+          <td>${githubHtml}</td>
+          <td>${subBadge}</td>
+          <td style="color:var(--text-muted);font-size:0.82rem">${fmtDate(u.created_at)}</td>
+          <td><span class="expand-icon">▶</span></td>
+        `;
+
+        // Subscription sub-row
+        const subTr = document.createElement('tr');
+        subTr.className = 'sub-rows';
+        subTr.style.display = 'none';
+        const subsHtml = subCount > 0
+          ? u.subscriptions.map(s => `
+              <div class="sub-entry">
+                <a class="sub-entry__repo" href="https://github.com/${s.repo_full_name}" target="_blank" rel="noopener">${s.repo_full_name}</a>
+                <span class="sub-entry__label">${s.label}</span>
+                <span class="sub-entry__date">checked ${fmtDate(s.last_checked_at)}</span>
+              </div>`).join('')
+          : '<div class="sub-empty">No subscriptions.</div>';
+        subTr.innerHTML = `<td colspan="5"><div class="sub-rows-inner">${subsHtml}</div></td>`;
+
+        tr.addEventListener('click', () => {
+          const open = subTr.style.display !== 'none';
+          subTr.style.display = open ? 'none' : 'table-row';
+          tr.classList.toggle('expanded', !open);
+        });
+
+        tbody.appendChild(tr);
+        tbody.appendChild(subTr);
+      });
+    }
+
+    // Search with debounce
+    let debounce;
+    document.getElementById('search').addEventListener('input', e => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => loadUsers(e.target.value.trim()), 300);
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>
