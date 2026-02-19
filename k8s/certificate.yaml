@@ -10,3 +10,4 @@ spec:
     kind: ClusterIssuer
   dnsNames:
   - issuebell.com
+  - "*.issuebell.com"  # 와일드카드도 무료로 발급 (DNS-01만 가능)
