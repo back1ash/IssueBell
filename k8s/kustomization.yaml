@@ -10,3 +10,5 @@ resources:
   - deployment.yaml
   - service.yaml
   - httproute.yaml
+  # cluster-issuer.yaml and certificate.yaml are applied separately
+  # (they must live in 'gateway' namespace, not 'issuebell')
