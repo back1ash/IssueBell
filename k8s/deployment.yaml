@@ -26,7 +26,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: issuebell
-          image: ghcr.io/back1ash/issuebell@sha256:0cc88792d779ef5c6621f87afa8a7f85f8dce4b18ea3a1f13bfe8e859cdf0a52
+          image: ghcr.io/back1ash/issuebell@sha256:db14a91d63f810383e6585058a123394248a1828a3077ce9567f3e913ce52139
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
