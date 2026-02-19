@@ -37,7 +37,7 @@ jobs:
       - name: Update deployment.yaml with new image digest
         run: |
           DIGEST="${{ steps.build.outputs.digest }}"
-          sed -i "s|image: ghcr.io/back1ash/issuebell:.*|image: ghcr.io/back1ash/issuebell@${DIGEST}|" k8s/deployment.yaml
+          sed -i "s|image: ghcr.io/back1ash/issuebell[:@].*|image: ghcr.io/back1ash/issuebell@${DIGEST}|" k8s/deployment.yaml
 
       - name: Commit and push updated deployment.yaml
         run: |
