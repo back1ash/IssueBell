@@ -25,9 +25,6 @@ class Settings(BaseSettings):
     github_client_secret: str = ""
     github_redirect_uri: str = "http://localhost:8000/auth/github/callback"
 
-    # GitHub webhook secret (must match the secret set on the GitHub webhook)
-    github_webhook_secret: str = ""
-
     # Polling interval in seconds (default 3 min)
     poll_interval: int = 180
 

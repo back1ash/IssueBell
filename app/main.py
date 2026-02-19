@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.database import SessionLocal, engine
 from app.models import Base, Subscription, User
-from app.routers import admin, auth, subscriptions, webhook
+from app.routers import admin, auth, subscriptions
 from app.services.discord import send_dm
 from app.services.github import build_issue_message, fetch_new_issues, match_label
 
@@ -53,16 +53,26 @@ async def poll_all_users() -> None:
                 now = datetime.now(timezone.utc).replace(tzinfo=None)
                 for issue in issues:
                     issue_labels = [lb["name"] for lb in issue.get("labels", [])]
-                    for sub in subs:
-                        matched = match_label(sub.label, issue_labels)
-                        if matched:
-                            try:
-                                await send_dm(
-                                    user.discord_id,
-                                    build_issue_message(issue, repo, matched),
-                                )
-                            except Exception as exc:
-                                logger.warning("DM to %s failed: %s", user.discord_id, exc)
+                    # Find the first subscription label that matches this issue —
+                    # send at most ONE DM per issue per user regardless of how many
+                    # subscriptions match.
+                    first_match = next(
+                        (
+                            (sub, matched)
+                            for sub in subs
+                            if (matched := match_label(sub.label, issue_labels)) is not None
+                        ),
+                        None,
+                    )
+                    if first_match is not None:
+                        _, matched_label = first_match
+                        try:
+                            await send_dm(
+                                user.discord_id,
+                                build_issue_message(issue, repo, matched_label),
+                            )
+                        except Exception as exc:
+                            logger.warning("DM to %s failed: %s", user.discord_id, exc)
 
                 for sub in subs:
                     sub.last_checked_at = now
@@ -105,7 +115,6 @@ templates = Jinja2Templates(directory="app/templates")
 
 app.include_router(auth.router)
 app.include_router(subscriptions.router)
-app.include_router(webhook.router)
 app.include_router(admin.router)
 
 

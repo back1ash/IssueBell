@@ -1,31 +1,10 @@
 ﻿"""GitHub API helpers  polling-based issue detection."""
 
-import hashlib
-import hmac
 import re
 from datetime import datetime, timezone
 
 import httpx
 
-from app.config import settings
-
-
-def verify_signature(body: bytes, signature_header: str | None) -> bool:
-    """Verify the GitHub webhook HMAC-SHA256 signature.
-
-    Returns True when the signature matches or when no webhook secret is
-    configured (dev/test mode).  Returns False on mismatch.
-    """
-    secret = settings.github_webhook_secret
-    if not secret:
-        # No secret configured — skip verification (dev mode).
-        return True
-    if not signature_header or not signature_header.startswith("sha256="):
-        return False
-    expected = "sha256=" + hmac.new(
-        secret.encode(), body, hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature_header)
 
 GITHUB_API = "https://api.github.com"
 _GH_HEADERS = {
