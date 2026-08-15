@@ -2,11 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - namespace.yaml
+  - ../../base
   - configmap.yaml
-  - pvc.yaml
-  - postgres.yaml
-  - deployment.yaml
-  - service.yaml
   - httproute.yaml
-  - referencegrant.yaml
+
+images:
+  - name: ghcr.io/back1ash/issuebell
+    newTag: sha-PLACEHOLDER
