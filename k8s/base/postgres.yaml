@@ -70,4 +70,4 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
-  clusterIP: None  # headless — only internal DNS needed
+  clusterIP: None
