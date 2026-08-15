@@ -10,19 +10,10 @@ spec:
   source:
     repoURL: https://github.com/back1ash/IssueBell.git
     targetRevision: main
-    path: k8s
+    path: k8s/overlays/production
   destination:
     server: https://kubernetes.default.svc
     namespace: issuebell
-  ignoreDifferences:
-  - group: cert-manager.io
-    kind: ClusterIssuer
-    jsonPointers:
-    - /status
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    jsonPointers:
-    - /status
   syncPolicy:
     automated:
       prune: true       # delete resources removed from git
