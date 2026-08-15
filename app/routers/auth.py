@@ -1,5 +1,6 @@
 """Discord + GitHub OAuth2 login / logout flow."""
 
+import logging
 import time
 from urllib.parse import urlencode
 
@@ -11,8 +12,10 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from app.config import settings
 from app.database import SessionLocal
 from app.models import User
+from app.services.discord import build_welcome_message, send_dm
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 DISCORD_API = "https://discord.com/api/v10"
 GITHUB_API  = "https://api.github.com"
@@ -75,9 +78,11 @@ async def discord_callback(request: Request, code: str = "", state: str = ""):
         discord_user = user_resp.json()
 
     db = SessionLocal()
+    is_new_user = False
     try:
         user = db.query(User).filter(User.discord_id == discord_user["id"]).first()
         if user is None:
+            is_new_user = True
             user = User(
                 discord_id=discord_user["id"],
                 username=discord_user["username"],
@@ -93,6 +98,18 @@ async def discord_callback(request: Request, code: str = "", state: str = ""):
         db.close()
 
     request.session["user_id"] = user.id
+
+    if is_new_user:
+        try:
+            await send_dm(
+                discord_user["id"],
+                build_welcome_message(discord_user["username"]),
+            )
+        except Exception as exc:
+            # A user may disable DMs or Discord may be temporarily unavailable.
+            # Their completed signup must remain usable in either case.
+            logger.warning("Welcome DM to %s failed: %s", discord_user["id"], exc)
+
     return RedirectResponse("/")
 
 

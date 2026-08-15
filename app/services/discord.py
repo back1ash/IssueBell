@@ -35,6 +35,16 @@ async def send_dm(discord_user_id: str, content: str) -> None:
         resp.raise_for_status()
 
 
+def build_welcome_message(username: str) -> str:
+    """Format the DM sent after a user completes their first Discord sign-in."""
+    return (
+        f"👋 **Welcome to IssueBell, {username}!**\n"
+        "Your Discord account is connected and ready to receive alerts.\n\n"
+        "Next, connect GitHub and add a repository label filter. "
+        "When a matching issue is opened, I'll send it here right away. 🔔"
+    )
+
+
 def build_issue_message(issue: dict, repo: str, matched_label: str) -> str:
     """Format the Discord DM message for a new issue notification."""
     title = issue.get("title", "(no title)")
