@@ -8,4 +8,4 @@ resources:
 
 images:
   - name: ghcr.io/back1ash/issuebell
-    newTag: sha-0802161aa4f11a65326b5673235ec1c428a3c447
+    newTag: sha-414dce7f4eda89a61ae0a431bc93a851e8b94612
