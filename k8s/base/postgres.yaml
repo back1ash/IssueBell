@@ -1,14 +1,16 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: postgres
   namespace: issuebell
   labels:
     app: postgres
 spec:
+  serviceName: postgres
   replicas: 1
-  strategy:
-    type: Recreate
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate
   selector:
     matchLabels:
       app: postgres
@@ -17,6 +19,7 @@ spec:
       labels:
         app: postgres
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
         - name: postgres
           image: postgres:16-alpine
@@ -46,17 +49,24 @@ spec:
               memory: 256Mi
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "issuebell"]
+              command: ["pg_isready", "-U", "issuebell", "-d", "issuebell"]
             initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "issuebell"]
+              command: ["pg_isready", "-U", "issuebell", "-d", "issuebell"]
             initialDelaySeconds: 5
             periodSeconds: 5
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "issuebell", "-d", "issuebell"]
+            periodSeconds: 5
+            failureThreshold: 30
       volumes:
         - name: postgres-data
           persistentVolumeClaim:
+            # Reuse the existing claim so Deployment -> StatefulSet does not
+            # create an empty database volume during the transition.
             claimName: postgres-data
 ---
 apiVersion: v1

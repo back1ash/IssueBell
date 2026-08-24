@@ -6,13 +6,14 @@ from sqlalchemy.orm import Session, joinedload
 from app.config import settings
 from app.database import get_db
 from app.models import Subscription, User
+from app.routers.auth import authenticated_user_id
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 def require_admin(request: Request, db: Session = Depends(get_db)) -> User:
-    user_id = request.session.get("user_id")
-    if not user_id:
+    user_id = authenticated_user_id(request, db)
+    if user_id is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     user = db.get(User, user_id)
     if user is None or user.discord_id != settings.admin_discord_id:
@@ -41,7 +42,7 @@ def list_users(
             "username": u.username,
             "avatar": u.avatar,
             "github_username": u.github_username,
-            "github_connected": u.github_token is not None,
+            "github_connected": u.github_id is not None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "subscriptions": [
                 {

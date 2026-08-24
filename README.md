@@ -1,70 +1,77 @@
-﻿# 🔔 IssueBell
+# 🔔 IssueBell
 
-> Get a Discord DM the moment a GitHub issue with your chosen label is opened.
+**Catch the right GitHub issue and ship the contribution.** IssueBell watches labels on public GitHub repositories and sends matching issues to you in a private Discord DM within minutes.
 
----
+[Open IssueBell](https://issuebell.com) · [Report a bug](https://github.com/back1ash/IssueBell/issues) · [Security](SECURITY.md)
 
-## Why I Built This
+## A verified founder result
 
-I wanted to start contributing to open source. Like many beginners, I was hunting for `good first issue` tickets — but every time I found one that looked approachable, it was already assigned or had five people racing to claim it. I was always a step behind.
+IssueBell surfaced [kubernetes/kubernetes#138149](https://github.com/kubernetes/kubernetes/issues/138149). Founder **back1ash** traced the downstream work, opened [jupyterhub/zero-to-jupyterhub-k8s#3862](https://github.com/jupyterhub/zero-to-jupyterhub-k8s/pull/3862) on April 1, and the pull request merged on April 2, 2026.
 
-The problem wasn't finding the issues. GitHub's search works fine. The problem was **timing**. Popular repositories get `good first issue` labeled tickets claimed within minutes of being opened. By the time I refreshed the page, the window had closed.
+This is the founder's case—not a customer testimonial—and it captures the outcome IssueBell is built to enable: notice relevant work early, review the context, and contribute responsibly.
 
-I needed something that would tell me *the moment* a new issue landed — not ten minutes later. So I built IssueBell.
+## What it does
 
----
+- Watches exact labels or regular-expression patterns on any supported public repository
+- Loads the repository's real labels before you create a watch
+- Offers focused Kubernetes, JupyterHub, and GitHub Docs starter packs
+- Sends private Discord DMs instead of a noisy all-activity feed
+- Shows when each watch was last checked and whether polling needs attention
+- Lets you send a test DM before waiting for a real match
+- Requires no webhook, repository installation, or admin access
 
-## Who Is This For
+IssueBell currently checks active watches about every three minutes. Delivery is best-effort and can take longer when GitHub, Discord, networking, or rate limits are unavailable.
 
-IssueBell is useful if you:
+## How it works
 
-- Are trying to contribute to open source but keep missing `good first issue` or `help wanted` tickets before they're taken
-- Want to watch a specific repository for issues tagged with a label you care about (`bug`, `documentation`, `hacktoberfest`, etc.)
-- Prefer getting a **Discord DM** over checking GitHub notifications or email
-
-You connect your GitHub account, pick a repo and a label (plain name or regex), and IssueBell polls GitHub on your behalf. When a matching issue appears, you get a Discord DM immediately.
-
----
-
-## How It Works
-
-IssueBell polls GitHub's API on a regular interval for each repository you subscribe to. When a new issue is found that matches any of your subscribed labels, it sends you a Discord DM via a bot.
-
-```
-GitHub API  ←── poll every few minutes
-     │
-     │  new issue with matching label?
-     ▼
-Discord Bot API
-     │
-     ▼
-📬 Discord DM → you
+```text
+GitHub public repository
+        │
+        │ check active watches about every 3 minutes
+        ▼
+label rule matches a new or newly labelled issue
+        │
+        ▼
+private Discord DM → review context → contribute
 ```
 
-No webhook setup on repos required — this works on any public repository, even ones you don't own.
+Connect Discord, connect GitHub, paste `owner/repo`, and choose one or more labels. IssueBell validates the repository and rules before monitoring begins. Always read the project's contribution guide and maintainer instructions before claiming work.
 
----
+## Run locally
 
-## Tech Stack
+1. Create Discord and GitHub OAuth applications and a Discord bot.
+2. Copy `.env.example` to `.env` and fill in the documented values.
+3. Install dependencies with `pip install -r requirements.txt`.
+4. Start the app with `uvicorn app.main:app --reload`.
+
+Local development uses SQLite by default. Set `DATABASE_URL` to PostgreSQL for a production deployment.
+
+For production, use strong, independent session and token-encryption secrets, HTTPS callback URLs, and the health endpoints `/health/live` and `/health/ready`.
+
+When upgrading an existing deployment to encrypted OAuth-token storage, back up the database and use the provided `Recreate` deployment strategy. The migration is roll-forward only: do not roll back to an image that cannot read `fernet:v1:` token values.
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Backend | Python · FastAPI |
-| Database | PostgreSQL · SQLAlchemy |
-| Auth | Discord OAuth2 + GitHub OAuth2 |
+| Backend | Python · FastAPI · SQLAlchemy |
+| Database | PostgreSQL |
+| Authentication | Discord OAuth2 · GitHub OAuth2 |
 | Notifications | Discord Bot API |
-| Scheduler | APScheduler (polling) |
-| Frontend | Jinja2 · Vanilla JS |
-| Deployment | Kubernetes + ArgoCD |
+| Scheduler | APScheduler |
+| Frontend | Jinja2 · Vanilla JavaScript |
+| Deployment | Kubernetes · Argo CD |
 
----
+## Privacy and account controls
 
-## Bugs & Feature Requests
+The hosted service stores the account, OAuth, watch, polling, and delivery data required to operate IssueBell. See the hosted [Privacy notice](https://issuebell.com/privacy) and [Terms](https://issuebell.com/terms). From the dashboard you can disconnect GitHub, log out, or permanently delete your IssueBell account and associated watch history.
 
-If you run into a bug or have an idea to make IssueBell more useful, feel free to [open an issue](https://github.com/back1ash/IssueBell/issues) or reach out directly via [LinkedIn Messenger](https://www.linkedin.com/in/back1ash/).
+Never put tokens, credentials, private repository details, or other sensitive data in a public issue. Report vulnerabilities through a [private GitHub security advisory](https://github.com/back1ash/IssueBell/security/advisories/new).
 
----
+## Contributing
+
+Bug reports and focused improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request and follow [SECURITY.md](SECURITY.md) for vulnerabilities.
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 back1ash

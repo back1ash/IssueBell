@@ -8,10 +8,9 @@ metadata:
 spec:
   replicas: 1
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    # Token-at-rest migration must not overlap with an older image that cannot
+    # decrypt the new values.
+    type: Recreate
   selector:
     matchLabels:
       app: issuebell
@@ -24,10 +23,17 @@ spec:
         runAsNonRoot: true
         runAsUser: 1001
         fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: issuebell
           image: ghcr.io/back1ash/issuebell:latest
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8000
               protocol: TCP
@@ -36,6 +42,9 @@ spec:
                 name: issuebell-config
             - secretRef:
                 name: issuebell-secret
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           resources:
             requests:
               cpu: 50m
@@ -45,14 +54,23 @@ spec:
               memory: 256Mi
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: issuebell.com
             initialDelaySeconds: 5
             periodSeconds: 30
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /
+              path: /readyz
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: issuebell.com
             initialDelaySeconds: 2
             periodSeconds: 5
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /subscriptions/
+Disallow: /admin/
+Disallow: /manage
+Disallow: /events
+Disallow: /docs
+Disallow: /redoc
+Disallow: /openapi.json
+Disallow: /health
+Disallow: /healthz
+Disallow: /readyz
+
+Sitemap: https://issuebell.com/sitemap.xml

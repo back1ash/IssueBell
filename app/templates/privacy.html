@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy — IssueBell</title>
+  <meta name="description" content="How IssueBell stores and uses account and subscription data." />
+  <link rel="canonical" href="https://issuebell.com/privacy" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://issuebell.com/privacy" />
+  <meta property="og:title" content="Privacy — IssueBell" />
+  <meta property="og:description" content="How IssueBell stores and uses account and subscription data." />
+  <meta property="og:image" content="https://issuebell.com/static/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="stylesheet" href="/static/style.css?v=4" />
+</head>
+<body class="legal-page">
+  <header class="navbar">
+    <a class="navbar__brand" href="/" aria-label="IssueBell home">
+      <img src="/static/logo-192.png" alt="" class="navbar__logo" />
+      <span class="navbar__title">IssueBell</span>
+    </a>
+  </header>
+  <main class="legal-content">
+    <p class="legal-kicker">Last updated August 23, 2026</p>
+    <h1>Privacy</h1>
+    <p>IssueBell stores only the data needed to authenticate you, check your watch rules, and deliver Discord notifications.</p>
+
+    <h2>Data we store</h2>
+    <ul>
+      <li>Your Discord account ID, username, and avatar reference.</li>
+      <li>Your GitHub account ID and username.</li>
+      <li>An encrypted GitHub OAuth token used to read public repository data within GitHub's rate limits.</li>
+      <li>The repositories and label rules you choose to watch.</li>
+      <li>Poll and delivery records used for delivery retries and deduplication.</li>
+      <li>A server-side login session referenced by a signed cookie.</li>
+      <li>A small allowlisted set of timestamped setup events used to understand whether onboarding works.</li>
+    </ul>
+
+    <h2>How we use data</h2>
+    <p>We use this data only to operate IssueBell, diagnose delivery failures, protect the service, and respond to support requests. We do not sell personal data or use it for advertising.</p>
+
+    <h2>Third-party services</h2>
+    <p>IssueBell sends requests to GitHub to inspect repository issues and to Discord to authenticate you and deliver DMs. Their respective privacy policies apply to data they process.</p>
+
+    <h2>Retention and deletion</h2>
+    <p>Your account data remains until you delete your account or it is no longer needed to operate and protect the service. IssueBell keeps only your 20 most recent test-delivery diagnostics. You can disconnect GitHub without deleting your Discord account, or permanently delete your IssueBell account from the dashboard. Deletion removes your stored account, login sessions, setup events, watch rules, and delivery records; token revocation is attempted with GitHub as part of the process.</p>
+
+    <h2>Security and questions</h2>
+    <p>OAuth tokens are encrypted at rest and access to administrative data is restricted. To report a security problem privately, use the repository's <a href="https://github.com/back1ash/IssueBell/security/advisories/new">security advisory form</a>. For other privacy questions, <a href="https://github.com/back1ash/IssueBell/issues">open an IssueBell issue</a> without including sensitive information.</p>
+
+    <p><a href="/">← Back to IssueBell</a> · <a href="/terms">Terms</a></p>
+  </main>
+</body>
+</html>

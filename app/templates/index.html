@@ -3,45 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IssueBell</title>
-  <!-- Open Graph / KakaoTalk link preview -->
-  <meta property="og:type"        content="website" />
-  <meta property="og:url"         content="https://issuebell.com/" />
-  <meta property="og:title"       content="IssueBell" />
-  <meta property="og:description" content="Get Discord DM alerts for GitHub issues you care about." />
-  <meta property="og:image"       content="https://issuebell.com/static/og-image.png" />
-  <meta property="og:image:width"  content="1200" />
+  <title>IssueBell — GitHub label alerts in Discord</title>
+  <meta name="description" content="Watch labels on any public GitHub repository and get a private Discord DM within minutes — without repository admin access or an all-activity feed." />
+  {% if user %}
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  {% else %}
+  <link rel="canonical" href="https://issuebell.com/" />
+  {% endif %}
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://issuebell.com/" />
+  <meta property="og:title" content="IssueBell — Catch the right GitHub issue" />
+  <meta property="og:description" content="Personal GitHub label alerts, delivered to Discord within minutes." />
+  <meta property="og:image" content="https://issuebell.com/static/og-image.png" />
+  <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="IssueBell — Catch the right GitHub issue" />
+  <meta name="twitter:description" content="Personal GitHub label alerts, delivered to Discord within minutes." />
+  <meta name="twitter:image" content="https://issuebell.com/static/og-image.png" />
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   <meta name="theme-color" content="#6366f1" />
-  <link rel="stylesheet" href="/static/style.css?v=2" />
+  {% if user %}<meta name="csrf-token" content="{{ csrf_token }}" />{% endif %}
+  <link rel="stylesheet" href="/static/style.css?v=4" />
+  {% if not user %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "IssueBell",
+    "url": "https://issuebell.com/",
+    "description": "Watch labels on public GitHub repositories and receive matching issue alerts in Discord.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "isAccessibleForFree": true,
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "codeRepository": "https://github.com/back1ash/IssueBell",
+    "license": "https://github.com/back1ash/IssueBell/blob/main/LICENSE",
+    "image": "https://issuebell.com/static/og-image.png"
+  }
+  </script>
+  {% endif %}
 </head>
 <body>
-  <!-- ── Header ──────────────────────────────────────────────────────────── -->
   <header class="navbar">
-    <div class="navbar__brand">
-      <img src="/static/logo.png" alt="IssueBell" class="navbar__logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
-      <span class="navbar__logo-fallback"><span class="navbar__bell">🔔</span><span class="navbar__title">IssueBell</span></span>
-    </div>
-    <nav class="navbar__actions">
-      <!-- ── Social links ───────────────────────────────────────────────── -->
+    <a class="navbar__brand" href="/" aria-label="IssueBell home">
+      <img src="/static/logo-192.png" alt="" class="navbar__logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+      <span class="navbar__logo-fallback"><span class="navbar__bell">🔔</span></span>
+      <span class="navbar__title">IssueBell</span>
+    </a>
+    <nav class="navbar__actions" aria-label="Primary navigation">
       <div class="navbar__social">
-        <a href="https://www.linkedin.com/in/back1ash/" target="_blank" rel="noopener" class="btn btn--ghost btn--icon" title="LinkedIn">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-          </svg>
-        </a>
-        <a href="https://github.com/back1ash" target="_blank" rel="noopener" class="btn btn--ghost btn--icon" title="GitHub">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
-          </svg>
-        </a>
         <a href="https://github.com/back1ash/IssueBell" target="_blank" rel="noopener" class="btn btn--star btn--icon" title="Star IssueBell on GitHub">
-          <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           Star
         </a>
       </div>
@@ -49,24 +67,18 @@
       {% if user %}
         <div class="avatar-wrapper">
           {% if user.avatar %}
-            <img
-              class="avatar"
-              src="https://cdn.discordapp.com/avatars/{{ user.discord_id }}/{{ user.avatar }}.png?size=64"
-              alt="{{ user.username }}"
-            />
+            <img class="avatar" src="https://cdn.discordapp.com/avatars/{{ user.discord_id }}/{{ user.avatar }}.png?size=64" alt="{{ user.username }}" />
           {% else %}
-            <div class="avatar avatar--placeholder">{{ user.username[0] | upper }}</div>
+            <div class="avatar avatar--placeholder" aria-hidden="true">{{ user.username[0] | upper }}</div>
           {% endif %}
           <span class="username">{{ user.username }}</span>
         </div>
-        <a href="/auth/logout" class="btn btn--ghost btn--sm">Logout</a>
+        <form method="post" action="/auth/logout" class="inline-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+          <button type="submit" class="btn btn--ghost btn--sm">Log out</button>
+        </form>
       {% else %}
-        <a href="/auth/login" class="btn btn--discord">
-          <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/>
-          </svg>
-          Login with Discord
-        </a>
+        <a href="/auth/login" class="btn btn--discord btn--sm">Watch a repo</a>
       {% endif %}
     </nav>
   </header>
@@ -74,272 +86,310 @@
   {% set error = request.query_params.get('error') %}
 
   {% if not user %}
-  <!-- ═══════════════════ LANDING — scroll-snap ═══════════════════ -->
-  <div class="snap-wrap">
-
-    <!-- ── 0: Hero ──────────────────────────────────────────────── -->
-    <section class="snap snap--hero">
-      {% if error == 'setup_required' %}
-        <div class="alert alert--warn snap-alert">
-          <strong>⚙️ Configuration required</strong> — Set <code>DISCORD_CLIENT_ID</code> and <code>DISCORD_CLIENT_SECRET</code> in <code>.env</code> then restart.
-          <a href="/" class="alert__link">Dismiss</a>
-        </div>
-      {% elif error == 'invalid_state' %}
-        <div class="alert alert--error snap-alert">
-          <strong>⚠️ Auth error</strong> — State mismatch. Please try again.
-          <a href="/" class="alert__link">Dismiss</a>
+  <main class="landing">
+    <section class="landing-hero">
+      {% if error %}
+        <div class="landing-shell landing-alert">
+          {% if error == 'setup_required' %}
+            <div class="alert alert--warn"><strong>IssueBell is not configured yet.</strong> The operator needs to finish Discord setup. <a href="/" class="alert__link">Dismiss</a></div>
+          {% elif error == 'invalid_state' %}
+            <div class="alert alert--error"><strong>Sign-in expired.</strong> Please try again. <a href="/" class="alert__link">Dismiss</a></div>
+          {% else %}
+            <div class="alert alert--error"><strong>We could not complete sign-in.</strong> Please try again. <a href="/" class="alert__link">Dismiss</a></div>
+          {% endif %}
         </div>
       {% endif %}
 
-      <div class="hero__inner">
-        <span class="hero__eyebrow">🔔 GitHub Issue Notifications</span>
-        <h1 class="hero__title">Get notified.<br/><span>Stay in the&nbsp;loop.</span></h1>
-        <p class="hero__sub">
-          IssueBell watches GitHub repositories and sends you a Discord DM
-          the moment a new issue with your chosen label is opened.
-        </p>
-        <a href="/auth/login" class="btn btn--discord btn--lg">
-          <svg class="btn__icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
-          Get Started — Login with Discord
-        </a>
-      </div>
-
-      <a class="scroll-cue" href="#step-1">
-        <span class="scroll-cue__label">How it works</span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </a>
-    </section>
-
-    <!-- ── 1: Connect Discord ────────────────────────────────────── -->
-    <section class="snap snap--step" id="step-1">
-      <div class="step__copy">
-        <div class="step__num">01</div>
-        <h2 class="step__title">Connect your Discord</h2>
-        <p class="step__desc">
-          Log in with your Discord account in one click — no password, no signup form.
-          IssueBell uses OAuth2 so you're always in control.
-        </p>
-      </div>
-      <div class="step__visual">
-        <div class="mock">
-          <div class="mock__titlebar">
-            <span class="mock__dot mock__dot--red"></span>
-            <span class="mock__dot mock__dot--yellow"></span>
-            <span class="mock__dot mock__dot--green"></span>
-            <span class="mock__url">issuebell.app</span>
+      <div class="landing-shell landing-hero__grid">
+        <div class="landing-hero__copy">
+          <span class="hero__eyebrow">Personal GitHub issue watchlist</span>
+          <h1 class="landing-hero__title">Catch the right issue.<br/><span>Ship the contribution.</span></h1>
+          <p class="landing-hero__sub">
+            Watch labels on any public GitHub repository. IssueBell checks every few minutes
+            and sends a private Discord DM — no repository admin access and no noisy all-activity feed.
+          </p>
+          <div class="landing-hero__actions">
+            <a href="/auth/login" class="btn btn--discord btn--lg">Watch your first repo</a>
+            <a href="#founder-result" class="btn btn--secondary btn--lg">See a verified result</a>
           </div>
-          <div class="mock__body mock__body--center">
-            <div class="mock__brand">🔔 IssueBell</div>
-            <p class="mock__tagline">GitHub issue alerts → Discord DMs</p>
-            <div class="mock__discord-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></svg>
-              Login with Discord
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── 2: Add Subscription ──────────────────────────────────── -->
-    <section class="snap snap--step snap--alt" id="step-2">
-      <div class="step__copy">
-        <div class="step__num">02</div>
-        <h2 class="step__title">Watch a repo &amp; label</h2>
-        <p class="step__desc">
-          Enter any GitHub repository and the issue label you care about.
-          Regex patterns are supported — <code>help.*</code>, <code>good.first.issue</code> — so one rule can catch many.
-        </p>
-      </div>
-      <div class="step__visual">
-        <div class="mock">
-          <div class="mock__titlebar">
-            <span class="mock__dot mock__dot--red"></span>
-            <span class="mock__dot mock__dot--yellow"></span>
-            <span class="mock__dot mock__dot--green"></span>
-            <span class="mock__url">issuebell.app</span>
-          </div>
-          <div class="mock__body">
-            <div class="mock__panel-title">Add Subscription</div>
-            <div class="mock__field">
-              <div class="mock__label">Repository</div>
-              <div class="mock__input mock__input--filled">facebook/react</div>
-            </div>
-            <div class="mock__field">
-              <div class="mock__label">Label <span class="badge-regex">regex</span></div>
-              <div class="mock__input mock__input--filled mock__input--focus">good.first.issue</div>
-            </div>
-            <div class="mock__submit">+ Add Subscription</div>
-            <div class="mock__divider"></div>
-            <div class="mock__sub-row">
-              <div>
-                <div class="mock__sub-repo">facebook/react</div>
-                <span class="mock__chip">good.first.issue</span>
-              </div>
-              <span class="mock__remove">Remove</span>
-            </div>
-            <div class="mock__sub-row mock__sub-row--dim">
-              <div>
-                <div class="mock__sub-repo">vercel/next.js</div>
-                <span class="mock__chip">bug</span>
-              </div>
-              <span class="mock__remove">Remove</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── 3: Get Notified ──────────────────────────────────────── -->
-    <section class="snap snap--step" id="step-3">
-      <div class="step__copy">
-        <div class="step__num">03</div>
-        <h2 class="step__title">Get the DM instantly</h2>
-        <p class="step__desc">
-          The moment a matching issue is opened, IssueBell delivers a Discord DM
-          with the title, label, and a direct link — right when it matters.
-        </p>
-      </div>
-      <div class="step__visual">
-        <div class="mock mock--dark">
-          <div class="mock__dm-sidebar">
-            <div class="mock__dm-sitem mock__dm-sitem--active">🔔 IssueBell</div>
-            <div class="mock__dm-sitem">👤 someuser</div>
-          </div>
-          <div class="mock__dm-main">
-            <div class="mock__dm-header">Direct Message — IssueBell <span class="mock__dm-badge">APP</span></div>
-            <div class="mock__dm-msg">
-              <div class="mock__dm-avatar">🔔</div>
-              <div class="mock__dm-content">
-                <div class="mock__dm-meta"><strong>IssueBell</strong> <span class="mock__dm-time">Today at 3:42 PM</span></div>
-                <div class="mock__dm-bubble">
-                  🔔 New issue on <strong>facebook/react</strong><br/>
-                  <span class="mock__dm-line"><strong>Title</strong> Add TypeScript support for ref callbacks</span>
-                  <span class="mock__dm-line"><strong>Label</strong> <span class="mock__chip mock__chip--light">good first issue</span></span>
-                  <span class="mock__dm-link">🔗 View Issue #31415 →</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </div><!-- /snap-wrap -->
-
-  {% else %}
-  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
-  {% if error == 'setup_required' %}
-    <div class="container" style="padding-bottom:0">
-      <div class="alert alert--warn">
-        <strong>⚙️ Configuration required</strong><br/>
-        Please set <code>DISCORD_CLIENT_ID</code> and <code>DISCORD_CLIENT_SECRET</code>
-        in your <code>.env</code> file, then restart the server.
-        <a href="/" class="alert__link">Dismiss</a>
-      </div>
-    </div>
-  {% elif error == 'invalid_state' %}
-    <div class="container" style="padding-bottom:0">
-      <div class="alert alert--error">
-        <strong>⚠️ Authentication error</strong> — OAuth2 state mismatch. Please try again.
-        <a href="/" class="alert__link">Dismiss</a>
-      </div>
-    </div>
-  {% endif %}
-
-  <main class="container">
-    <div class="dashboard">
-
-      <!-- ── GitHub Account (항상 최상단) ─────────────────────────── -->
-      <div class="panel panel--github">
-        <h2 class="panel__title">GitHub Account</h2>
-        {% if user.github_token %}
-          <p class="github-status">Connected as <strong>{{ user.github_username }}</strong> ✓</p>
-          <a href="/auth/github/disconnect" class="btn btn--ghost btn--sm" style="color:var(--danger,#dc2626);">Disconnect GitHub</a>
-        {% else %}
-          <p class="github-status">Connect your GitHub account so IssueBell can poll repos on your behalf.</p>
-          <a href="/auth/github" class="btn btn--primary">Connect GitHub</a>
-        {% endif %}
-      </div>
-
-      <!-- ── Subscription panels wrapper (overlay when GitHub not connected) ── -->
-      <div class="panel-group{% if not user.github_token %} panel-group--locked{% endif %}">
-
-        {% if not user.github_token %}
-          <div class="panel-group__overlay">
-            <p>🔗 Connect your GitHub account above to add subscriptions and receive notifications.</p>
-          </div>
-        {% endif %}
-
-        <!-- ── Add Subscription ──────────────────────────────────────── -->
-        <div class="panel">
-          <h2 class="panel__title">Add Subscription</h2>
-          <form id="add-form" class="add-form">
-            <div class="form-group">
-              <label class="form-label" for="repo">Repository</label>
-              <input id="repo" class="form-input" type="text" placeholder="owner/repo-name or GitHub URL"
-                required />
-              <span class="form-hint">e.g. <code>facebook/react</code> or <code>https://github.com/facebook/react</code></span>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Label <span class="badge-regex">regex</span></label>
-              <div id="label-tag-input" class="tag-input" onclick="this.querySelector('.tag-input__field').focus()">
-                <input id="label" class="tag-input__field" type="text"
-                  placeholder="good-first-issue" autocomplete="off" />
-              </div>
-              <span class="form-hint">Type and press <kbd>,</kbd> or <kbd>Enter↵</kbd> to add multiple. Regex supported.</span>
-              <div class="label-presets">
-                <span class="label-presets__hint">Quick picks:</span>
-                <button type="button" class="label-preset-btn" data-label="bug">bug</button>
-                <button type="button" class="label-preset-btn" data-label="good.first.issue">good first issue</button>
-                <button type="button" class="label-preset-btn" data-label="help.wanted">help wanted</button>
-                <button type="button" class="label-preset-btn" data-label="enhancement">enhancement</button>
-                <button type="button" class="label-preset-btn" data-label="documentation">documentation</button>
-              </div>
-            </div>
-            <button type="submit" class="btn btn--primary btn--full">+ Add Subscription</button>
-            <p id="form-error" class="form-error" hidden></p>
-          </form>
-        </div>
-
-        <!-- ── My Subscriptions ──────────────────────────────────────── -->
-        <div class="panel panel--subs">
-        <h2 class="panel__title">
-          My Subscriptions
-          <span class="badge">{{ subscriptions | length }}</span>
-        </h2>
-        {% if subscriptions %}
-          <ul id="sub-list" class="sub-list">
-            {% for repo, subs in subscriptions | groupby('repo_full_name') %}
-              <li class="repo-group" data-repo="{{ repo }}">
-                <div class="repo-group__header">
-                  <a class="repo-group__name" href="https://github.com/{{ repo }}"
-                    target="_blank" rel="noopener">{{ repo }}</a>
-                </div>
-                <div class="repo-group__labels">
-                  {% for sub in subs %}
-                    <span class="label-chip" data-id="{{ sub.id }}">
-                      <span class="label-chip__text">{{ sub.label }}</span>
-                      <button class="label-chip__remove" onclick="deleteSub({{ sub.id }}, this)" title="Remove">×</button>
-                    </span>
-                  {% endfor %}
-                </div>
-              </li>
-            {% endfor %}
+          <ul class="trust-list" aria-label="IssueBell benefits">
+            <li>Free to use</li>
+            <li>Public repos</li>
+            <li>Disconnect anytime</li>
           </ul>
-        {% else %}
-          <div id="empty-state" class="empty-state">
-            <span class="empty-state__icon">🔕</span>
-            <p>No subscriptions yet.<br/>Add one above to start receiving notifications.</p>
+        </div>
+
+        <aside class="outcome-card" aria-label="How an IssueBell alert looks">
+          <div class="outcome-card__topline">
+            <span class="status-dot status-dot--healthy"></span>
+            Watching <strong>kubernetes/kubernetes</strong>
           </div>
-        {% endif %}
-      </div><!-- /panel panel--subs -->
+          <div class="outcome-card__labels">
+            <span>good first issue</span><span>help wanted</span>
+          </div>
+          <div class="outcome-card__dm">
+            <div class="outcome-card__avatar">🔔</div>
+            <div>
+              <div class="outcome-card__meta"><strong>IssueBell</strong> <span>Discord DM</span></div>
+              <p><strong>New matching issue</strong><br/>Migrate DRA components to support granular authorization…</p>
+              <a href="https://github.com/kubernetes/kubernetes/issues/138149" target="_blank" rel="noopener">View issue #138149 →</a>
+            </div>
+          </div>
+          <p class="outcome-card__footnote">Checks run about every 3 minutes. Delivery timing depends on GitHub and Discord availability.</p>
+        </aside>
+      </div>
+    </section>
 
-      </div><!-- /panel-group -->
+    <section class="proof-section" id="founder-result">
+      <div class="landing-shell proof-card">
+        <div class="proof-card__mark">✓</div>
+        <div class="proof-card__body">
+          <span class="section-kicker">Founder case · verified on GitHub</span>
+          <h2>One alert became a merged open-source contribution.</h2>
+          <p>
+            IssueBell surfaced <a href="https://github.com/kubernetes/kubernetes/issues/138149" target="_blank" rel="noopener">Kubernetes issue #138149</a>.
+            Founder <strong>back1ash</strong> traced the downstream work, opened a JupyterHub fix on April 1,
+            and <a href="https://github.com/jupyterhub/zero-to-jupyterhub-k8s/pull/3862" target="_blank" rel="noopener">PR #3862 merged on April 2, 2026</a>.
+          </p>
+          <div class="proof-flow" aria-label="IssueBell founder outcome">
+            <span>Matching issue</span><b>→</b><span>Discord alert</span><b>→</b><span class="proof-flow__success">Merged PR</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    </div>
+    <section class="starter-section" id="starter-packs">
+      <div class="landing-shell">
+        <div class="section-heading">
+          <span class="section-kicker">Start with a focused watchlist</span>
+          <h2>Pick a starter pack, then make it yours.</h2>
+          <p>Each pack pre-fills a public repository and useful contributor labels. You review everything before a watch is created.</p>
+        </div>
+        <div class="starter-grid">
+          <article class="starter-card">
+            <span class="starter-card__icon">☸</span>
+            <h3>Kubernetes contributor</h3>
+            <p>Watch accepted newcomer work in Kubernetes.</p>
+            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="kubernetes">Review this pack</a>
+          </article>
+          <article class="starter-card starter-card--featured">
+            <span class="starter-card__tag">Founder-tested</span>
+            <span class="starter-card__icon">◉</span>
+            <h3>JupyterHub contributor</h3>
+            <p>Follow approachable work in the project from the verified founder case.</p>
+            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
+            <a href="/auth/login" class="btn btn--primary btn--full starter-pack-trigger" data-starter-pack="jupyterhub">Review this pack</a>
+          </article>
+          <article class="starter-card">
+            <span class="starter-card__icon">✎</span>
+            <h3>GitHub Docs contributor</h3>
+            <p>Include documentation and newcomer-friendly work.</p>
+            <div class="starter-card__labels"><span>good first issue</span><span>content</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="github-docs">Review this pack</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="how-section" id="how-it-works">
+      <div class="landing-shell">
+        <div class="section-heading">
+          <span class="section-kicker">How it works</span>
+          <h2>Only the signal you asked for.</h2>
+        </div>
+        <div class="how-grid">
+          <article><span>01</span><h3>Choose a repo</h3><p>Paste any public GitHub URL. IssueBell can load that repository’s real labels for you.</p></article>
+          <article><span>02</span><h3>Choose the signal</h3><p>Pick exact labels or use a regular expression to cover naming variations.</p></article>
+          <article><span>03</span><h3>Act with context</h3><p>Get a private Discord DM with the issue, matched label, author, and direct link within minutes.</p></article>
+        </div>
+        <div class="landing-cta">
+          <div><strong>Ready when the right issue appears?</strong><span>Your first watch takes about a minute to set up.</span></div>
+          <a href="/auth/login" class="btn btn--discord btn--lg">Start watching</a>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="/static/app.js?v=2"></script>
+  {% else %}
+  <main class="container dashboard-page">
+    {% if error %}
+      <div class="dashboard-alert">
+        {% if error == 'github_setup_required' %}
+          <div class="alert alert--warn"><strong>GitHub connection is not configured yet.</strong> Please contact the operator. <a href="/" class="alert__link">Dismiss</a></div>
+        {% elif error == 'github_token_failed' %}
+          <div class="alert alert--error"><strong>GitHub did not return an access token.</strong> Please connect again. <a href="/" class="alert__link">Dismiss</a></div>
+        {% elif error == 'invalid_state' %}
+          <div class="alert alert--error"><strong>Connection expired.</strong> Please try again. <a href="/" class="alert__link">Dismiss</a></div>
+        {% elif error == 'github_account_in_use' %}
+          <div class="alert alert--error"><strong>That GitHub account is already linked.</strong> Sign in with the original Discord account and disconnect it there before trying again. <a href="/" class="alert__link">Dismiss</a></div>
+        {% else %}
+          <div class="alert alert--error"><strong>Something interrupted setup.</strong> Please try again. <a href="/" class="alert__link">Dismiss</a></div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <section class="dashboard-intro" data-github-connected="{{ 'true' if github_connected else 'false' }}">
+      <div>
+        <span class="section-kicker">Your personal issue watchlist</span>
+        <h1>Watch the work that matters.</h1>
+        <p>IssueBell checks active subscriptions about every 3 minutes and sends matching issues to your Discord DMs.</p>
+      </div>
+      <div class="monitor-pill" id="monitor-summary" aria-live="polite">
+        <span class="status-dot {% if (not github_connected or github_reconnect_required) and subscriptions %}status-dot--warning{% elif subscriptions %}status-dot--healthy{% else %}status-dot--idle{% endif %}"></span>
+        <span>{% if (not github_connected or github_reconnect_required) and subscriptions %}Paused — reconnect GitHub{% elif subscriptions %}{{ subscriptions | length }} active watch{% if subscriptions | length != 1 %}es{% endif %}{% else %}Ready for your first watch{% endif %}</span>
+      </div>
+    </section>
+
+    <div class="dashboard">
+      <section class="panel panel--github account-panel">
+        <div class="account-panel__main">
+          <div>
+            <span class="panel__eyebrow">Connections</span>
+            <h2 class="panel__title">GitHub and Discord</h2>
+            {% if github_connected and not github_reconnect_required %}
+              <p class="github-status"><span class="status-dot status-dot--healthy"></span> GitHub connected as <strong>{{ user.github_username }}</strong></p>
+            {% elif github_connected %}
+              <p class="github-status"><span class="status-dot status-dot--warning"></span> GitHub needs to be reconnected before watches can continue.</p>
+            {% else %}
+              <p class="github-status"><span class="status-dot status-dot--idle"></span> Connect GitHub so IssueBell can validate repositories and check public issues.</p>
+            {% endif %}
+          </div>
+          <div class="account-panel__actions">
+            <button type="button" class="btn btn--secondary" id="test-dm-btn">Send a test DM</button>
+            {% if github_connected and not github_reconnect_required %}
+              <form method="post" action="/auth/github/disconnect" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button type="submit" class="btn btn--ghost btn--sm btn--danger-text">Disconnect GitHub</button>
+              </form>
+            {% else %}
+              <a href="/auth/github" class="btn btn--primary">{% if github_connected %}Reconnect GitHub{% else %}Connect GitHub{% endif %}</a>
+            {% endif %}
+          </div>
+        </div>
+        <p id="test-dm-result" class="inline-feedback" aria-live="polite" hidden></p>
+      </section>
+
+      <div class="panel-group{% if not github_connected or github_reconnect_required %} panel-group--locked{% endif %}">
+        <section class="panel panel--add"{% if not github_connected or github_reconnect_required %} aria-disabled="true"{% endif %}>
+          {% if not github_connected or github_reconnect_required %}
+            <div class="panel-group__overlay" role="status"><p>🔗 Connect GitHub above to validate a repository and start watching.</p></div>
+          {% endif %}
+          <div class="panel-heading-row">
+            <div><span class="panel__eyebrow">New watch</span><h2 class="panel__title">Choose a repository and labels</h2></div>
+          </div>
+
+          <div class="dashboard-starters" aria-label="Starter packs"{% if not github_connected or github_reconnect_required %} inert{% endif %}>
+            <span>Starter packs</span>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="kubernetes">Kubernetes</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="jupyterhub">JupyterHub</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="github-docs">GitHub Docs</button>
+          </div>
+
+          <form id="add-form" class="add-form" novalidate{% if not github_connected or github_reconnect_required %} inert{% endif %}>
+            <div class="form-group">
+              <label class="form-label" for="repo">Public GitHub repository</label>
+              <div class="repo-picker">
+                <input id="repo" class="form-input" type="text" list="repo-suggestions" placeholder="owner/repo or https://github.com/owner/repo" autocomplete="off" required />
+                <button type="button" class="btn btn--secondary repo-picker__button" id="lookup-repo-btn">Load labels</button>
+              </div>
+              <datalist id="repo-suggestions">
+                <option value="kubernetes/kubernetes"></option>
+                <option value="jupyterhub/zero-to-jupyterhub-k8s"></option>
+                <option value="github/docs"></option>
+              </datalist>
+              <span id="repo-feedback" class="form-hint" aria-live="polite">Paste a GitHub URL or enter <code>owner/repo</code>.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Labels <span class="badge-regex">regex supported</span></label>
+              <div id="repo-label-suggestions" class="repo-label-suggestions" hidden>
+                <span class="repo-label-suggestions__title">Labels in this repository</span>
+                <div id="repo-label-list" class="repo-label-list"></div>
+              </div>
+              <div id="label-tag-input" class="tag-input">
+                <input id="label" class="tag-input__field" type="text" placeholder="good-first-issue" autocomplete="off" aria-label="Label or regular expression" />
+              </div>
+              <span class="form-hint">Choose a real label above, or type one and press <kbd>,</kbd> or <kbd>Enter</kbd>. You can add more than one.</span>
+              <div class="label-presets">
+                <span class="label-presets__hint">Common patterns:</span>
+                <button type="button" class="label-preset-btn" data-label="good.first.issue">good first issue</button>
+                <button type="button" class="label-preset-btn" data-label="help.wanted">help wanted</button>
+                <button type="button" class="label-preset-btn" data-label="documentation">documentation</button>
+                <button type="button" class="label-preset-btn" data-label="bug">bug</button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn--primary btn--full" data-default-label="Start watching">Start watching</button>
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+            <p id="form-success" class="inline-feedback inline-feedback--success" aria-live="polite" hidden></p>
+          </form>
+        </section>
+
+        <section class="panel panel--subs">
+          <div class="panel-heading-row">
+            <div><span class="panel__eyebrow">Monitoring</span><h2 class="panel__title">My watches <span class="badge" id="subscription-count">{{ subscriptions | length }}</span></h2></div>
+            <span class="panel-heading-row__note">About every 3 min</span>
+          </div>
+          {% if subscriptions %}
+            <ul id="sub-list" class="sub-list">
+              {% for repo, subs in subscriptions | groupby('repo_full_name') %}
+                <li class="repo-group" data-repo="{{ repo }}">
+                  <div class="repo-group__header">
+                    <a class="repo-group__name" href="https://github.com/{{ repo }}" target="_blank" rel="noopener">{{ repo }}</a>
+                    <span class="watch-state"><span class="status-dot {% if not github_connected or github_reconnect_required %}status-dot--warning{% else %}status-dot--healthy{% endif %}"></span> {% if not github_connected or github_reconnect_required %}Paused{% else %}Watching{% endif %}</span>
+                  </div>
+                  <div class="repo-group__meta">
+                    Last checked
+                    {% if subs[0].last_checked_at %}
+                      <time class="relative-time" datetime="{{ subs[0].last_checked_at.isoformat() }}Z">{{ subs[0].last_checked_at }}</time>
+                    {% else %}
+                      <span>waiting for first check</span>
+                    {% endif %}
+                  </div>
+                  <div class="repo-group__labels">
+                    {% for sub in subs %}
+                      <span class="label-chip" data-id="{{ sub.id }}"{% if sub.last_checked_at %} data-last-checked="{{ sub.last_checked_at.isoformat() }}Z"{% endif %}>
+                        <span class="label-chip__text">{{ sub.label }}</span>
+                        <button type="button" class="label-chip__remove" onclick="deleteSub({{ sub.id }}, this)" title="Stop watching {{ sub.label }}" aria-label="Stop watching {{ sub.label }}">×</button>
+                      </span>
+                    {% endfor %}
+                  </div>
+                  <p class="repo-group__error" hidden></p>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div id="empty-state" class="empty-state">
+              <span class="empty-state__icon">🔕</span>
+              <strong>No watches yet</strong>
+              <p>Choose a starter pack or add a repository to begin.</p>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+  </main>
   {% endif %}
+
+  <footer class="footer site-footer">
+    <div class="site-footer__inner">
+      <span>IssueBell · Open-source GitHub alerts for Discord</span>
+      <nav aria-label="Legal and support">
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="https://github.com/back1ash/IssueBell/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
+        <a href="https://github.com/back1ash/IssueBell/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+        {% if user %}
+          <form method="post" action="/auth/delete-account" class="inline-form account-delete-form" data-confirm="Delete your IssueBell account, watches, and delivery history? This cannot be undone.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+            <button type="submit" class="footer-link-button">Delete account</button>
+          </form>
+        {% endif %}
+      </nav>
+    </div>
+  </footer>
+
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

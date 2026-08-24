@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IssueBell — Manage</title>
+  <meta name="robots" content="noindex, nofollow, noarchive" />
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
-  <link rel="stylesheet" href="/static/style.css?v=2" />
+  <link rel="stylesheet" href="/static/style.css?v=4" />
   <style>
     /* ── Admin-specific styles ───────────────────────────────────── */
     .admin-wrap {
@@ -206,7 +207,7 @@
   <header class="navbar">
     <div class="navbar__brand">
       <a href="/" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;">
-        <img src="/static/logo.png" alt="IssueBell" class="navbar__logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+        <img src="/static/logo-192.png" alt="IssueBell" class="navbar__logo" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
         <span class="navbar__logo-fallback"><span class="navbar__bell">🔔</span><span class="navbar__title">IssueBell</span></span>
       </a>
       <span style="font-size:0.75rem;font-weight:700;color:var(--accent);background:var(--label-bg);padding:3px 10px;border-radius:999px;letter-spacing:0.06em;">ADMIN</span>
@@ -221,7 +222,10 @@
         <span class="username">{{ user.username }}</span>
       </div>
       <a href="/" class="btn btn--ghost btn--sm">← Dashboard</a>
-      <a href="/auth/logout" class="btn btn--ghost btn--sm">Logout</a>
+      <form method="post" action="/auth/logout" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <button type="submit" class="btn btn--ghost btn--sm">Logout</button>
+      </form>
     </nav>
   </header>
 
@@ -272,28 +276,76 @@
   <script>
     let allUsers = [];
 
+    function renderTableMessage(message) {
+      const tbody = document.getElementById('user-tbody');
+      tbody.replaceChildren();
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.className = 'empty-admin';
+      td.textContent = message;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
+
     async function loadUsers(q = '') {
-      const url = '/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : '');
-      const res = await fetch(url);
-      if (res.status === 403) {
-        document.getElementById('user-tbody').innerHTML =
-          '<tr><td colspan="5" class="empty-admin">⛔ Access denied.</td></tr>';
-        return;
+      try {
+        const url = '/admin/users' + (q ? `?q=${encodeURIComponent(q)}` : '');
+        const res = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (res.status === 401 || res.status === 403) {
+          renderTableMessage('Access denied.');
+          return;
+        }
+        if (!res.ok) {
+          renderTableMessage('Could not load users. Please try again.');
+          return;
+        }
+        const payload = await res.json();
+        allUsers = Array.isArray(payload) ? payload : [];
+        renderUsers(allUsers);
+        updateStats(allUsers);
+      } catch (_error) {
+        renderTableMessage('Could not load users. Please try again.');
       }
-      allUsers = await res.json();
-      renderUsers(allUsers);
-      updateStats(allUsers);
     }
 
     function updateStats(users) {
       document.getElementById('stat-users').textContent = users.length;
       document.getElementById('stat-github').textContent = users.filter(u => u.github_connected).length;
-      document.getElementById('stat-subs').textContent = users.reduce((a, u) => a + u.subscriptions.length, 0);
+      document.getElementById('stat-subs').textContent = users.reduce(
+        (total, user) => total + (Array.isArray(user.subscriptions) ? user.subscriptions.length : 0),
+        0,
+      );
     }
 
     function fmtDate(iso) {
       if (!iso) return '—';
-      return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '—';
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function textElement(tagName, className, text) {
+      const element = document.createElement(tagName);
+      if (className) element.className = className;
+      element.textContent = String(text ?? '');
+      return element;
+    }
+
+    function safeDiscordAvatar(user) {
+      const discordId = String(user.discord_id ?? '');
+      const avatar = String(user.avatar ?? '');
+      if (!/^\d{1,32}$/.test(discordId) || !/^[A-Za-z0-9_]{1,128}$/.test(avatar)) {
+        return null;
+      }
+      return `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png?size=64`;
+    }
+
+    function safeGitHubRepoUrl(repoName) {
+      const parts = String(repoName ?? '').split('/');
+      const safePart = part => /^[A-Za-z0-9_.-]{1,100}$/.test(part) && part !== '.' && part !== '..';
+      if (parts.length !== 2 || !parts.every(safePart)) return null;
+      return `https://github.com/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}`;
     }
 
     function renderUsers(users) {
@@ -301,50 +353,97 @@
       document.getElementById('result-count').textContent = users.length > 0 ? `(${users.length})` : '';
 
       if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-admin">No users found.</td></tr>';
+        renderTableMessage('No users found.');
         return;
       }
 
-      tbody.innerHTML = '';
+      tbody.replaceChildren();
+      const fragment = document.createDocumentFragment();
       users.forEach(u => {
-        const avatarHtml = u.avatar
-          ? `<img class="user-avatar" src="https://cdn.discordapp.com/avatars/${u.discord_id}/${u.avatar}.png?size=64" />`
-          : `<span class="user-avatar--placeholder">${u.username[0].toUpperCase()}</span>`;
-
-        const githubHtml = u.github_connected
-          ? `<span class="tag tag--green">✓ ${u.github_username ?? ''}</span>`
-          : `<span class="tag tag--gray">Not connected</span>`;
-
-        const subCount = u.subscriptions.length;
-        const subBadge = subCount > 0
-          ? `<span class="badge">${subCount}</span>`
-          : `<span style="color:var(--text-muted);font-size:0.82rem">0</span>`;
+        const subscriptions = Array.isArray(u.subscriptions) ? u.subscriptions : [];
+        const username = String(u.username ?? 'Unknown user');
+        const subCount = subscriptions.length;
 
         // User row
         const tr = document.createElement('tr');
         tr.className = 'user-row';
-        tr.dataset.id = u.id;
-        tr.innerHTML = `
-          <td>${avatarHtml}<strong>${u.username}</strong></td>
-          <td>${githubHtml}</td>
-          <td>${subBadge}</td>
-          <td style="color:var(--text-muted);font-size:0.82rem">${fmtDate(u.created_at)}</td>
-          <td><span class="expand-icon">▶</span></td>
-        `;
+
+        const userCell = document.createElement('td');
+        const avatarUrl = safeDiscordAvatar(u);
+        if (avatarUrl) {
+          const avatar = document.createElement('img');
+          avatar.className = 'user-avatar';
+          avatar.src = avatarUrl;
+          avatar.alt = '';
+          avatar.referrerPolicy = 'no-referrer';
+          userCell.appendChild(avatar);
+        } else {
+          const initial = Array.from(username)[0]?.toLocaleUpperCase() ?? '?';
+          userCell.appendChild(textElement('span', 'user-avatar--placeholder', initial));
+        }
+        userCell.appendChild(textElement('strong', '', username));
+        tr.appendChild(userCell);
+
+        const githubCell = document.createElement('td');
+        githubCell.appendChild(
+          u.github_connected
+            ? textElement('span', 'tag tag--green', `✓ ${String(u.github_username ?? '')}`)
+            : textElement('span', 'tag tag--gray', 'Not connected'),
+        );
+        tr.appendChild(githubCell);
+
+        const countCell = document.createElement('td');
+        const count = textElement('span', subCount > 0 ? 'badge' : '', subCount);
+        if (subCount === 0) {
+          count.style.color = 'var(--text-muted)';
+          count.style.fontSize = '0.82rem';
+        }
+        countCell.appendChild(count);
+        tr.appendChild(countCell);
+
+        const joinedCell = textElement('td', '', fmtDate(u.created_at));
+        joinedCell.style.color = 'var(--text-muted)';
+        joinedCell.style.fontSize = '0.82rem';
+        tr.appendChild(joinedCell);
+
+        const expandCell = document.createElement('td');
+        expandCell.appendChild(textElement('span', 'expand-icon', '▶'));
+        tr.appendChild(expandCell);
 
         // Subscription sub-row
         const subTr = document.createElement('tr');
         subTr.className = 'sub-rows';
         subTr.style.display = 'none';
-        const subsHtml = subCount > 0
-          ? u.subscriptions.map(s => `
-              <div class="sub-entry">
-                <a class="sub-entry__repo" href="https://github.com/${s.repo_full_name}" target="_blank" rel="noopener">${s.repo_full_name}</a>
-                <span class="sub-entry__label">${s.label}</span>
-                <span class="sub-entry__date">checked ${fmtDate(s.last_checked_at)}</span>
-              </div>`).join('')
-          : '<div class="sub-empty">No subscriptions.</div>';
-        subTr.innerHTML = `<td colspan="5"><div class="sub-rows-inner">${subsHtml}</div></td>`;
+        const subCell = document.createElement('td');
+        subCell.colSpan = 5;
+        const subRows = document.createElement('div');
+        subRows.className = 'sub-rows-inner';
+        if (subCount === 0) {
+          subRows.appendChild(textElement('div', 'sub-empty', 'No subscriptions.'));
+        } else {
+          subscriptions.forEach(subscription => {
+            const entry = document.createElement('div');
+            entry.className = 'sub-entry';
+            const repoName = String(subscription.repo_full_name ?? 'Unknown repository');
+            const repoUrl = safeGitHubRepoUrl(repoName);
+            if (repoUrl) {
+              const link = textElement('a', 'sub-entry__repo', repoName);
+              link.href = repoUrl;
+              link.target = '_blank';
+              link.rel = 'noopener noreferrer';
+              entry.appendChild(link);
+            } else {
+              entry.appendChild(textElement('span', 'sub-entry__repo', repoName));
+            }
+            entry.appendChild(textElement('span', 'sub-entry__label', subscription.label));
+            entry.appendChild(
+              textElement('span', 'sub-entry__date', `checked ${fmtDate(subscription.last_checked_at)}`),
+            );
+            subRows.appendChild(entry);
+          });
+        }
+        subCell.appendChild(subRows);
+        subTr.appendChild(subCell);
 
         tr.addEventListener('click', () => {
           const open = subTr.style.display !== 'none';
@@ -352,9 +451,10 @@
           tr.classList.toggle('expanded', !open);
         });
 
-        tbody.appendChild(tr);
-        tbody.appendChild(subTr);
+        fragment.appendChild(tr);
+        fragment.appendChild(subTr);
       });
+      tbody.appendChild(fragment);
     }
 
     // Search with debounce
