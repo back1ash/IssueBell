@@ -8,14 +8,30 @@ def read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
-def test_landing_uses_honest_positioning_and_verified_founder_case() -> None:
+def test_landing_focuses_on_features_and_diverse_starter_packs() -> None:
     html = read("app/templates/index.html")
+    javascript = read("static/app.js")
 
     assert "within minutes" in html
     assert "about every 3 minutes" in html
-    assert "Founder case" in html
-    assert "kubernetes/kubernetes/issues/138149" in html
-    assert "jupyterhub/zero-to-jupyterhub-k8s/pull/3862" in html
+    for feature in (
+        "Choose real repository labels",
+        "Catch labels added later",
+        "Test and monitor delivery",
+    ):
+        assert feature in html
+    for repository in (
+        "freeCodeCamp/freeCodeCamp",
+        "scikit-learn/scikit-learn",
+        "mdn/content",
+        "microsoft/vscode",
+    ):
+        assert repository in html
+        assert repository in javascript
+    assert "Founder case" not in html
+    assert "Founder-tested" not in html
+    assert "138149" not in html
+    assert "3862" not in html
     assert "issuebell.app" not in html
 
 
@@ -37,6 +53,21 @@ def test_account_mutations_are_post_forms() -> None:
     for route in ("/auth/logout", "/auth/github/disconnect", "/auth/delete-account"):
         assert f'method="post" action="{route}"' in html
     assert html.count('name="csrf_token"') >= 3
+
+
+def test_destructive_actions_use_app_owned_confirmation_ui() -> None:
+    html = read("app/templates/index.html")
+    javascript = read("static/app.js")
+    css = read("static/style.css")
+
+    assert 'id="confirm-dialog"' in html
+    assert 'id="app-toast"' in html
+    assert "requestConfirmation" in javascript
+    assert "showToast" in javascript
+    assert "window.confirm" not in javascript
+    assert "window.alert" not in javascript
+    assert ".confirm-dialog::backdrop" in css
+    assert ".app-toast" in css
 
 
 def test_legal_pages_and_footer_are_linked_and_styled() -> None:

@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   <meta name="theme-color" content="#6366f1" />
   {% if user %}<meta name="csrf-token" content="{{ csrf_token }}" />{% endif %}
-  <link rel="stylesheet" href="/static/style.css?v=4" />
+  <link rel="stylesheet" href="/static/style.css?v=5" />
   {% if not user %}
   <script type="application/ld+json">
   {
@@ -110,7 +110,7 @@
           </p>
           <div class="landing-hero__actions">
             <a href="/auth/login" class="btn btn--discord btn--lg">Watch your first repo</a>
-            <a href="#founder-result" class="btn btn--secondary btn--lg">See a verified result</a>
+            <a href="#capabilities" class="btn btn--secondary btn--lg">Explore features</a>
           </div>
           <ul class="trust-list" aria-label="IssueBell benefits">
             <li>Free to use</li>
@@ -122,7 +122,7 @@
         <aside class="outcome-card" aria-label="How an IssueBell alert looks">
           <div class="outcome-card__topline">
             <span class="status-dot status-dot--healthy"></span>
-            Watching <strong>kubernetes/kubernetes</strong>
+            Watching <strong>microsoft/vscode</strong>
           </div>
           <div class="outcome-card__labels">
             <span>good first issue</span><span>help wanted</span>
@@ -130,9 +130,9 @@
           <div class="outcome-card__dm">
             <div class="outcome-card__avatar">🔔</div>
             <div>
-              <div class="outcome-card__meta"><strong>IssueBell</strong> <span>Discord DM</span></div>
-              <p><strong>New matching issue</strong><br/>Migrate DRA components to support granular authorization…</p>
-              <a href="https://github.com/kubernetes/kubernetes/issues/138149" target="_blank" rel="noopener">View issue #138149 →</a>
+              <div class="outcome-card__meta"><strong>IssueBell</strong> <span>Example DM</span></div>
+              <p><strong>New matching issue</strong><br/>Improve the getting-started experience for extension authors…</p>
+              <span class="outcome-card__link">Open issue on GitHub →</span>
             </div>
           </div>
           <p class="outcome-card__footnote">Checks run about every 3 minutes. Delivery timing depends on GitHub and Discord availability.</p>
@@ -140,20 +140,29 @@
       </div>
     </section>
 
-    <section class="proof-section" id="founder-result">
-      <div class="landing-shell proof-card">
-        <div class="proof-card__mark">✓</div>
-        <div class="proof-card__body">
-          <span class="section-kicker">Founder case · verified on GitHub</span>
-          <h2>One alert became a merged open-source contribution.</h2>
-          <p>
-            IssueBell surfaced <a href="https://github.com/kubernetes/kubernetes/issues/138149" target="_blank" rel="noopener">Kubernetes issue #138149</a>.
-            Founder <strong>back1ash</strong> traced the downstream work, opened a JupyterHub fix on April 1,
-            and <a href="https://github.com/jupyterhub/zero-to-jupyterhub-k8s/pull/3862" target="_blank" rel="noopener">PR #3862 merged on April 2, 2026</a>.
-          </p>
-          <div class="proof-flow" aria-label="IssueBell founder outcome">
-            <span>Matching issue</span><b>→</b><span>Discord alert</span><b>→</b><span class="proof-flow__success">Merged PR</span>
-          </div>
+    <section class="capabilities-section" id="capabilities">
+      <div class="landing-shell">
+        <div class="section-heading">
+          <span class="section-kicker">Focused by design</span>
+          <h2>Find useful issues without watching every update.</h2>
+          <p>IssueBell narrows busy repositories to the labels you care about and keeps the watch easy to verify.</p>
+        </div>
+        <div class="capability-grid">
+          <article class="capability-card">
+            <span class="capability-card__icon">⌕</span>
+            <h3>Choose real repository labels</h3>
+            <p>Validate a public repository and load its current labels before creating your watch.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-card__icon">↻</span>
+            <h3>Catch labels added later</h3>
+            <p>Updated issues are checked too, so a useful label added after creation can still reach you.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-card__icon">✓</span>
+            <h3>Test and monitor delivery</h3>
+            <p>Send a test DM, review polling status, and let temporary delivery failures retry automatically.</p>
+          </article>
         </div>
       </div>
     </section>
@@ -161,32 +170,42 @@
     <section class="starter-section" id="starter-packs">
       <div class="landing-shell">
         <div class="section-heading">
-          <span class="section-kicker">Start with a focused watchlist</span>
-          <h2>Pick a starter pack, then make it yours.</h2>
-          <p>Each pack pre-fills a public repository and useful contributor labels. You review everything before a watch is created.</p>
+          <span class="section-kicker">Explore by field</span>
+          <h2>Start with a project that matches your interests.</h2>
+          <p>Choose from web, data, documentation, and developer tools. Each pack uses current public labels and stays fully customizable.</p>
         </div>
         <div class="starter-grid">
           <article class="starter-card">
-            <span class="starter-card__icon">☸</span>
-            <h3>Kubernetes contributor</h3>
-            <p>Watch accepted newcomer work in Kubernetes.</p>
-            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
-            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="kubernetes">Review this pack</a>
-          </article>
-          <article class="starter-card starter-card--featured">
-            <span class="starter-card__tag">Founder-tested</span>
-            <span class="starter-card__icon">◉</span>
-            <h3>JupyterHub contributor</h3>
-            <p>Follow approachable work in the project from the verified founder case.</p>
-            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
-            <a href="/auth/login" class="btn btn--primary btn--full starter-pack-trigger" data-starter-pack="jupyterhub">Review this pack</a>
+            <span class="starter-card__tag">Web &amp; learning</span>
+            <span class="starter-card__icon">⌘</span>
+            <h3>freeCodeCamp</h3>
+            <p>Improve a widely used learning platform and its curriculum.</p>
+            <div class="starter-card__labels"><span>first timers only</span><span>help wanted</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="web">Review this pack</a>
           </article>
           <article class="starter-card">
+            <span class="starter-card__tag">AI &amp; data</span>
+            <span class="starter-card__icon">◉</span>
+            <h3>scikit-learn</h3>
+            <p>Find ways to improve a popular machine-learning library.</p>
+            <div class="starter-card__labels"><span>help wanted</span><span>Documentation</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="data">Review this pack</a>
+          </article>
+          <article class="starter-card">
+            <span class="starter-card__tag">Documentation</span>
             <span class="starter-card__icon">✎</span>
-            <h3>GitHub Docs contributor</h3>
-            <p>Include documentation and newcomer-friendly work.</p>
-            <div class="starter-card__labels"><span>good first issue</span><span>content</span></div>
-            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="github-docs">Review this pack</a>
+            <h3>MDN Web Docs</h3>
+            <p>Help make web-development knowledge clearer and more complete.</p>
+            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="docs">Review this pack</a>
+          </article>
+          <article class="starter-card">
+            <span class="starter-card__tag">Developer tools</span>
+            <span class="starter-card__icon">⌨</span>
+            <h3>Visual Studio Code</h3>
+            <p>Follow approachable work in a tool used by developers every day.</p>
+            <div class="starter-card__labels"><span>good first issue</span><span>help wanted</span></div>
+            <a href="/auth/login" class="btn btn--secondary btn--full starter-pack-trigger" data-starter-pack="devtools">Review this pack</a>
           </article>
         </div>
       </div>
@@ -281,9 +300,10 @@
 
           <div class="dashboard-starters" aria-label="Starter packs"{% if not github_connected or github_reconnect_required %} inert{% endif %}>
             <span>Starter packs</span>
-            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="kubernetes">Kubernetes</button>
-            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="jupyterhub">JupyterHub</button>
-            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="github-docs">GitHub Docs</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="web">Web</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="data">AI &amp; data</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="docs">Docs</button>
+            <button type="button" class="starter-mini starter-pack-trigger" data-starter-pack="devtools">Developer tools</button>
           </div>
 
           <form id="add-form" class="add-form" novalidate{% if not github_connected or github_reconnect_required %} inert{% endif %}>
@@ -294,9 +314,10 @@
                 <button type="button" class="btn btn--secondary repo-picker__button" id="lookup-repo-btn">Load labels</button>
               </div>
               <datalist id="repo-suggestions">
-                <option value="kubernetes/kubernetes"></option>
-                <option value="jupyterhub/zero-to-jupyterhub-k8s"></option>
-                <option value="github/docs"></option>
+                <option value="freeCodeCamp/freeCodeCamp"></option>
+                <option value="scikit-learn/scikit-learn"></option>
+                <option value="mdn/content"></option>
+                <option value="microsoft/vscode"></option>
               </datalist>
               <span id="repo-feedback" class="form-hint" aria-live="polite">Paste a GitHub URL or enter <code>owner/repo</code>.</span>
             </div>
@@ -381,7 +402,7 @@
         <a href="https://github.com/back1ash/IssueBell/blob/main/SECURITY.md" target="_blank" rel="noopener">Security</a>
         <a href="https://github.com/back1ash/IssueBell/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
         {% if user %}
-          <form method="post" action="/auth/delete-account" class="inline-form account-delete-form" data-confirm="Delete your IssueBell account, watches, and delivery history? This cannot be undone.">
+          <form method="post" action="/auth/delete-account" class="inline-form account-delete-form" data-confirm-title="Delete your IssueBell account?" data-confirm="Your account, watches, and delivery history will be permanently deleted. This action cannot be undone." data-confirm-label="Delete account">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
             <button type="submit" class="footer-link-button">Delete account</button>
           </form>
@@ -390,6 +411,28 @@
     </div>
   </footer>
 
-  <script src="/static/app.js?v=4"></script>
+  {% if user %}
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+    <form method="dialog" class="confirm-dialog__surface">
+      <div class="confirm-dialog__icon" aria-hidden="true">!</div>
+      <div class="confirm-dialog__content">
+        <h2 id="confirm-dialog-title">Confirm action</h2>
+        <p id="confirm-dialog-message">Please confirm this action.</p>
+      </div>
+      <div class="confirm-dialog__actions">
+        <button id="confirm-dialog-cancel" type="submit" value="cancel" class="btn btn--secondary" autofocus>Keep it</button>
+        <button id="confirm-dialog-action" type="submit" value="confirm" class="btn btn--danger-solid">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <span class="app-toast__indicator" aria-hidden="true"></span>
+    <span id="app-toast-message"></span>
+    <button id="app-toast-close" type="button" class="app-toast__close" aria-label="Dismiss notification">×</button>
+  </div>
+  {% endif %}
+
+  <script src="/static/app.js?v=5"></script>
 </body>
 </html>

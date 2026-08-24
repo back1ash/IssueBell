@@ -1,17 +1,21 @@
 /* IssueBell dashboard interactions. All enhanced controls fall back to manual input. */
 
 const STARTER_PACKS = Object.freeze({
-  kubernetes: {
-    repo: "kubernetes/kubernetes",
-    labels: ["good.first.issue", "help.wanted"],
+  web: {
+    repo: "freeCodeCamp/freeCodeCamp",
+    labels: ["first timers only", "help wanted"],
   },
-  jupyterhub: {
-    repo: "jupyterhub/zero-to-jupyterhub-k8s",
-    labels: ["good.first.issue", "help.wanted"],
+  data: {
+    repo: "scikit-learn/scikit-learn",
+    labels: ["help wanted", "Documentation"],
   },
-  "github-docs": {
-    repo: "github/docs",
-    labels: ["good.first.issue", "help.wanted", "content"],
+  docs: {
+    repo: "mdn/content",
+    labels: ["good first issue", "help wanted"],
+  },
+  devtools: {
+    repo: "microsoft/vscode",
+    labels: ["good first issue", "help wanted"],
   },
 });
 
@@ -31,9 +35,19 @@ const testDmResult = document.getElementById("test-dm-result");
 const dashboardIntro = document.querySelector(".dashboard-intro");
 const githubConnected = dashboardIntro?.dataset.githubConnected === "true";
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+const confirmDialog = document.getElementById("confirm-dialog");
+const confirmTitle = document.getElementById("confirm-dialog-title");
+const confirmMessage = document.getElementById("confirm-dialog-message");
+const confirmAction = document.getElementById("confirm-dialog-action");
+const confirmCancel = document.getElementById("confirm-dialog-cancel");
+const appToast = document.getElementById("app-toast");
+const appToastMessage = document.getElementById("app-toast-message");
+const appToastClose = document.getElementById("app-toast-close");
 
 let pendingLabels = [];
 let activeLabelRequest = null;
+let confirmationResolver = null;
+let toastTimer = null;
 
 function parseRepo(raw) {
   const value = String(raw || "").trim().replace(/\/+$/, "");
@@ -85,6 +99,52 @@ function showFeedback(element, message, state = "") {
 function hideFeedback(element) {
   if (element) element.hidden = true;
 }
+
+function requestConfirmation({ title, message, confirmLabel = "Confirm" }) {
+  if (!confirmDialog || typeof confirmDialog.showModal !== "function") return Promise.resolve(false);
+  if (confirmDialog.open) confirmDialog.close("cancel");
+  confirmTitle.textContent = title;
+  confirmMessage.textContent = message;
+  confirmAction.textContent = confirmLabel;
+
+  return new Promise((resolve) => {
+    confirmationResolver = resolve;
+    confirmDialog.showModal();
+    confirmCancel?.focus();
+  });
+}
+
+confirmDialog?.addEventListener("close", () => {
+  const resolve = confirmationResolver;
+  confirmationResolver = null;
+  resolve?.(confirmDialog.returnValue === "confirm");
+});
+
+confirmDialog?.addEventListener("click", (event) => {
+  const bounds = confirmDialog.getBoundingClientRect();
+  const inside = event.clientX >= bounds.left && event.clientX <= bounds.right
+    && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+  if (!inside) confirmDialog.close("cancel");
+});
+
+function hideToast() {
+  if (toastTimer) window.clearTimeout(toastTimer);
+  toastTimer = null;
+  if (appToast) appToast.hidden = true;
+}
+
+function showToast(message, state = "success") {
+  if (!appToast || !appToastMessage) return;
+  hideToast();
+  appToastMessage.textContent = message;
+  appToast.classList.remove("app-toast--success", "app-toast--error");
+  appToast.classList.add(`app-toast--${state}`);
+  appToast.setAttribute("role", state === "error" ? "alert" : "status");
+  appToast.hidden = false;
+  toastTimer = window.setTimeout(hideToast, state === "error" ? 7000 : 4000);
+}
+
+appToastClose?.addEventListener("click", hideToast);
 
 repoInput?.addEventListener("input", () => {
   const value = repoInput.value.trim();
@@ -359,7 +419,15 @@ function subscriptionError(status, data) {
 }
 
 async function deleteSub(id, button) {
-  if (!window.confirm("Stop watching this label?")) return;
+  const chip = [...document.querySelectorAll(".label-chip")].find((item) => String(item.dataset.id) === String(id));
+  const label = chip?.querySelector(".label-chip__text")?.textContent?.trim() || "this label";
+  const confirmed = await requestConfirmation({
+    title: "Stop watching this label?",
+    message: `IssueBell will stop sending alerts for “${label}”. You can add this watch again at any time.`,
+    confirmLabel: "Stop watching",
+  });
+  if (!confirmed) return;
+
   button.disabled = true;
   try {
     const response = await fetch(`/subscriptions/${encodeURIComponent(id)}`, {
@@ -369,15 +437,15 @@ async function deleteSub(id, button) {
     const data = await safeJson(response);
     if (!response.ok) throw new Error(detailText(data, "Could not remove this watch."));
 
-    const chip = [...document.querySelectorAll(".label-chip")].find((item) => String(item.dataset.id) === String(id));
     const group = chip?.closest(".repo-group");
     chip?.remove();
     if (group && !group.querySelector(".label-chip")) group.remove();
     updateBadge(-1);
     checkEmptyState();
     refreshMonitoringStatus();
+    showToast(`Stopped watching “${label}”.`);
   } catch (error) {
-    window.alert(error.message || "Could not remove this watch.");
+    showToast(error.message || "Could not remove this watch.", "error");
     button.disabled = false;
   }
 }
@@ -614,8 +682,14 @@ function updateRelativeTimes() {
 }
 
 document.querySelectorAll("form[data-confirm]").forEach((form) => {
-  form.addEventListener("submit", (event) => {
-    if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const confirmed = await requestConfirmation({
+      title: form.dataset.confirmTitle || "Are you sure?",
+      message: form.dataset.confirm,
+      confirmLabel: form.dataset.confirmLabel || "Confirm",
+    });
+    if (confirmed) form.submit();
   });
 });
 
