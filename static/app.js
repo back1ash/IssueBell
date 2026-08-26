@@ -30,6 +30,13 @@ const repoLabelSuggestions = document.getElementById("repo-label-suggestions");
 const repoLabelList = document.getElementById("repo-label-list");
 const labelInput = document.getElementById("label");
 const tagInputEl = document.getElementById("label-tag-input");
+const previewAlertsBtn = document.getElementById("preview-alerts-btn");
+const alertPreview = document.getElementById("alert-preview");
+const alertPreviewTitle = document.getElementById("alert-preview-title");
+const alertPreviewCount = document.getElementById("alert-preview-count");
+const alertPreviewSummary = document.getElementById("alert-preview-summary");
+const alertPreviewWarnings = document.getElementById("alert-preview-warnings");
+const alertPreviewIssues = document.getElementById("alert-preview-issues");
 const testDmBtn = document.getElementById("test-dm-btn");
 const testDmResult = document.getElementById("test-dm-result");
 const dashboardIntro = document.querySelector(".dashboard-intro");
@@ -46,6 +53,8 @@ const appToastClose = document.getElementById("app-toast-close");
 
 let pendingLabels = [];
 let activeLabelRequest = null;
+let activePreviewRequest = null;
+let previewSignature = null;
 let confirmationResolver = null;
 let toastTimer = null;
 
@@ -147,6 +156,7 @@ function showToast(message, state = "success") {
 appToastClose?.addEventListener("click", hideToast);
 
 repoInput?.addEventListener("input", () => {
+  invalidateAlertPreview();
   const value = repoInput.value.trim();
   repoInput.classList.remove("form-input--valid", "form-input--invalid");
   repoLabelSuggestions?.setAttribute("hidden", "");
@@ -248,6 +258,7 @@ function renderRepoLabels(labels) {
 
 function renderPendingChips() {
   if (!tagInputEl) return;
+  invalidateAlertPreview();
   tagInputEl.querySelectorAll(".tag-chip").forEach((element) => element.remove());
   pendingLabels.forEach((label, index) => {
     const chip = document.createElement("span");
@@ -288,6 +299,8 @@ labelInput?.addEventListener("keydown", (event) => {
 labelInput?.addEventListener("blur", () => {
   if (labelInput.value.trim()) addPendingLabel(labelInput.value);
 });
+
+labelInput?.addEventListener("input", invalidateAlertPreview);
 
 document.querySelectorAll(".label-preset-btn").forEach((button) => {
   button.addEventListener("click", () => {
@@ -338,6 +351,187 @@ function restoreStarterPack() {
     if (githubConnected) loadRepoLabels(repo);
   }
 }
+
+function currentPreviewSignature(repo, labels) {
+  return JSON.stringify([String(repo || "").toLowerCase(), ...labels]);
+}
+
+function invalidateAlertPreview() {
+  activePreviewRequest?.abort();
+  activePreviewRequest = null;
+  previewSignature = null;
+  if (previewAlertsBtn) {
+    previewAlertsBtn.disabled = false;
+    previewAlertsBtn.textContent = "Preview alerts";
+  }
+  if (alertPreview) {
+    alertPreview.hidden = true;
+    alertPreview.setAttribute("aria-busy", "false");
+  }
+}
+
+function setPreviewLoading() {
+  if (!alertPreview) return;
+  alertPreview.hidden = false;
+  alertPreview.classList.add("alert-preview--loading");
+  alertPreview.setAttribute("aria-busy", "true");
+  if (alertPreviewTitle) alertPreviewTitle.textContent = "Checking recent activity…";
+  if (alertPreviewCount) alertPreviewCount.textContent = "";
+  if (alertPreviewSummary) alertPreviewSummary.textContent = "Reviewing recent open issues with the same rules used for Discord alerts.";
+  alertPreviewWarnings?.replaceChildren();
+  if (alertPreviewWarnings) alertPreviewWarnings.hidden = true;
+  alertPreviewIssues?.replaceChildren();
+}
+
+function renderPreviewError(message) {
+  if (!alertPreview) return;
+  alertPreview.hidden = false;
+  alertPreview.classList.remove("alert-preview--loading");
+  alertPreview.setAttribute("aria-busy", "false");
+  if (alertPreviewTitle) alertPreviewTitle.textContent = "Preview unavailable";
+  if (alertPreviewCount) alertPreviewCount.textContent = "Try again";
+  if (alertPreviewSummary) alertPreviewSummary.textContent = message;
+  alertPreviewWarnings?.replaceChildren();
+  if (alertPreviewWarnings) alertPreviewWarnings.hidden = true;
+  alertPreviewIssues?.replaceChildren();
+}
+
+function previewTime(value, fallback) {
+  if (!value) return fallback;
+  const date = parseServerDate(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function renderAlertPreview(data) {
+  if (!alertPreview || !alertPreviewIssues) return;
+  const issues = Array.isArray(data.issues) ? data.issues : [];
+  const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+  const estimate = Number(data.estimated_notification_count) || 0;
+  const examined = Number(data.examined_issue_count) || 0;
+  const matching = Number(data.matching_issue_count) || 0;
+  const windowDays = Number(data.window_days) || 30;
+
+  alertPreview.hidden = false;
+  alertPreview.classList.remove("alert-preview--loading");
+  alertPreview.setAttribute("aria-busy", "false");
+  if (alertPreviewTitle) alertPreviewTitle.textContent = `${windowDays}-day alert preview`;
+  if (alertPreviewCount) alertPreviewCount.textContent = `${estimate} alert${estimate === 1 ? "" : "s"}`;
+  if (alertPreviewSummary) {
+    const partial = data.is_partial ? " This is a partial estimate for a busy repository." : "";
+    alertPreviewSummary.textContent = `Checked ${examined} recently updated open issue${examined === 1 ? "" : "s"}; ${matching} currently match your labels and ${estimate} would have triggered a DM.${partial}`;
+  }
+
+  alertPreviewWarnings?.replaceChildren();
+  if (alertPreviewWarnings) {
+    warnings.forEach((warning) => {
+      const item = document.createElement("li");
+      item.textContent = String(warning);
+      alertPreviewWarnings.appendChild(item);
+    });
+    alertPreviewWarnings.hidden = warnings.length === 0;
+  }
+
+  alertPreviewIssues.replaceChildren();
+  if (!issues.length) {
+    const empty = document.createElement("li");
+    empty.className = "alert-preview__empty";
+    empty.textContent = "No recent open issue would have triggered an alert with these labels.";
+    alertPreviewIssues.appendChild(empty);
+    return;
+  }
+
+  const safeRepo = parseRepo(data.repo_full_name || "");
+  issues.forEach((issue) => {
+    const item = document.createElement("li");
+    item.className = "alert-preview-issue";
+
+    const header = document.createElement("div");
+    header.className = "alert-preview-issue__header";
+    const link = document.createElement("a");
+    link.className = "alert-preview-issue__title";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = `#${issue.issue_number} — ${issue.title || "(no title)"}`;
+    link.href = safeRepo && Number.isInteger(issue.issue_number)
+      ? `https://github.com/${safeRepo}/issues/${issue.issue_number}`
+      : "#";
+    header.appendChild(link);
+
+    const reason = document.createElement("p");
+    reason.className = "alert-preview-issue__reason";
+    reason.textContent = issue.trigger_reason || "Issue became actionable";
+
+    const meta = document.createElement("p");
+    meta.className = "alert-preview-issue__meta";
+    const assigned = Array.isArray(issue.assigned_to) && issue.assigned_to.length
+      ? `Assigned to ${issue.assigned_to.join(", ")}`
+      : "Unassigned";
+    meta.textContent = `Label: ${issue.matched_label || "—"} · ${assigned} · Triggered ${previewTime(issue.triggered_at, "recently")} · Opened ${previewTime(issue.created_at, "unknown")}`;
+
+    item.append(header, reason, meta);
+    alertPreviewIssues.appendChild(item);
+  });
+}
+
+previewAlertsBtn?.addEventListener("click", async () => {
+  hideFeedback(formError);
+  hideFeedback(formSuccess);
+  if (labelInput?.value.trim()) addPendingLabel(labelInput.value);
+
+  const repo = parseRepo(repoInput?.value || "");
+  if (!repo) {
+    showFeedback(formError, "Enter a valid public GitHub repository.", "error");
+    repoInput?.focus();
+    return;
+  }
+  if (!pendingLabels.length) {
+    showFeedback(formError, "Choose or enter at least one label.", "error");
+    labelInput?.focus();
+    return;
+  }
+
+  const labels = [...pendingLabels];
+  const signature = currentPreviewSignature(repo, labels);
+  activePreviewRequest?.abort();
+  const previewRequest = new AbortController();
+  activePreviewRequest = previewRequest;
+  previewAlertsBtn.disabled = true;
+  previewAlertsBtn.textContent = "Checking…";
+  setPreviewLoading();
+
+  try {
+    const response = await fetch("/subscriptions/preview", {
+      method: "POST",
+      headers: csrfHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
+      body: JSON.stringify({ repo_full_name: repo, labels }),
+      signal: previewRequest.signal,
+    });
+    const data = await safeJson(response);
+    if (!response.ok) {
+      const defaults = {
+        401: "Sign in again and reconnect GitHub.",
+        403: "GitHub did not grant access to this repository.",
+        404: "That public repository could not be found.",
+        422: "One of these patterns does not match a current repository label.",
+        429: "Preview is cooling down or GitHub's rate limit is busy. Try again shortly.",
+      };
+      throw new RepoLookupError(defaults[response.status] || detailText(data, "Could not build the alert preview."));
+    }
+    if (signature !== currentPreviewSignature(parseRepo(repoInput?.value || ""), pendingLabels)) return;
+    previewSignature = signature;
+    renderAlertPreview(data);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    renderPreviewError(error.message || "Could not build the alert preview. Try again.");
+  } finally {
+    if (activePreviewRequest === previewRequest) {
+      activePreviewRequest = null;
+      previewAlertsBtn.disabled = false;
+      previewAlertsBtn.textContent = previewSignature === signature ? "Refresh preview" : "Preview alerts";
+    }
+  }
+});
 
 addForm?.addEventListener("submit", async (event) => {
   event.preventDefault();

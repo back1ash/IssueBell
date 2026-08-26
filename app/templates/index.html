@@ -25,7 +25,7 @@
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png" />
   <meta name="theme-color" content="#6366f1" />
   {% if user %}<meta name="csrf-token" content="{{ csrf_token }}" />{% endif %}
-  <link rel="stylesheet" href="/static/style.css?v=5" />
+  <link rel="stylesheet" href="/static/style.css?v=6" />
   {% if not user %}
   <script type="application/ld+json">
   {
@@ -341,7 +341,23 @@
               </div>
             </div>
 
-            <button type="submit" class="btn btn--primary btn--full" data-default-label="Start watching">Start watching</button>
+            <div class="watch-form-actions">
+              <button type="button" class="btn btn--secondary" id="preview-alerts-btn">Preview alerts</button>
+              <button type="submit" class="btn btn--primary" data-default-label="Start watching">Start watching</button>
+            </div>
+            <section id="alert-preview" class="alert-preview" aria-live="polite" aria-busy="false" hidden>
+              <div class="alert-preview__heading">
+                <div>
+                  <span class="alert-preview__eyebrow">30-day preview</span>
+                  <h3 id="alert-preview-title">Recent alerts</h3>
+                </div>
+                <span id="alert-preview-count" class="alert-preview__count"></span>
+              </div>
+              <p id="alert-preview-summary" class="alert-preview__summary"></p>
+              <ul id="alert-preview-warnings" class="alert-preview__warnings" hidden></ul>
+              <ol id="alert-preview-issues" class="alert-preview__issues"></ol>
+              <p class="alert-preview__note">Estimate only: future repository activity can change the actual alert volume.</p>
+            </section>
             <p id="form-error" class="form-error" role="alert" hidden></p>
             <p id="form-success" class="inline-feedback inline-feedback--success" aria-live="polite" hidden></p>
           </form>
@@ -433,6 +449,6 @@
   </div>
   {% endif %}
 
-  <script src="/static/app.js?v=6"></script>
+  <script src="/static/app.js?v=7"></script>
 </body>
 </html>

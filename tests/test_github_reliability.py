@@ -12,6 +12,7 @@ from app.services.github import (
     compile_label_pattern,
     fetch_issue_events,
     fetch_new_issues,
+    fetch_recent_issues_limited,
     match_label,
 )
 
@@ -73,6 +74,43 @@ async def test_fetch_new_issues_uses_updates_and_follows_pagination() -> None:
     assert requests[0].url.params["per_page"] == "100"
     assert requests[0].url.params["since"] == "2026-08-23T10:59:58Z"
     assert len(requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_preview_issue_fetch_is_bounded_and_reports_more_pages() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            headers={
+                "Link": '<https://api.github.com/repos/acme/project/issues?page=2>; rel="next"'
+            },
+            json=[
+                {
+                    "id": 10,
+                    "number": 10,
+                    "created_at": "2026-08-25T10:00:00Z",
+                    "updated_at": "2026-08-25T11:00:00Z",
+                }
+            ],
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        issues, has_more = await fetch_recent_issues_limited(
+            "acme/project",
+            "token",
+            datetime(2026, 7, 27, 0, 0, 0),
+            limit=1,
+            client=client,
+        )
+
+    assert [issue["number"] for issue in issues] == [10]
+    assert has_more is True
+    assert requests[0].url.params["direction"] == "desc"
+    assert requests[0].url.params["per_page"] == "1"
+    assert requests[0].url.params["since"] == "2026-07-27T00:00:00Z"
 
 
 @pytest.mark.asyncio

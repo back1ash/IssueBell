@@ -43,6 +43,9 @@ def test_dashboard_targets_reliability_endpoints_with_csrf() -> None:
     assert "/subscriptions/repositories/" in javascript
     assert 'fetch("/subscriptions/test-dm"' in javascript
     assert 'fetch("/subscriptions/status"' in javascript
+    assert 'fetch("/subscriptions/preview"' in javascript
+    assert 'id="preview-alerts-btn"' in html
+    assert 'id="alert-preview"' in html
     assert '"X-CSRF-Token"' in javascript
     assert "manual" in javascript.lower()
 

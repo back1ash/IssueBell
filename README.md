@@ -14,6 +14,7 @@ This is the founder's case—not a customer testimonial—and it captures the ou
 
 - Watches exact labels or regular-expression patterns on any supported public repository
 - Loads the repository's real labels before you create a watch
+- Previews the last 30 days of alerts before you save a watch, including the trigger reason and current assignee
 - Offers focused Kubernetes, JupyterHub, and GitHub Docs starter packs
 - Sends private Discord DMs instead of a noisy all-activity feed
 - Alerts on new unassigned issues, newly applied watched labels, issues that become unassigned, and matching issues that reopen

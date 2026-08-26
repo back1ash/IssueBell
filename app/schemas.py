@@ -66,6 +66,64 @@ class SubscriptionRead(SubscriptionCreate):
     model_config = {"from_attributes": True}
 
 
+class SubscriptionPreviewCreate(UTCResponseModel):
+    repo_full_name: str = Field(
+        ...,
+        pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+        examples=["octocat/Hello-World"],
+    )
+    labels: list[str] = Field(..., min_length=1, max_length=20)
+
+    @field_validator("repo_full_name")
+    @classmethod
+    def normalize_repo(cls, value: str) -> str:
+        return value.lower()
+
+    @field_validator("labels")
+    @classmethod
+    def labels_must_be_valid_regexes(cls, labels: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for raw_label in labels:
+            label = raw_label.strip()
+            if not label or len(label) > 200:
+                raise ValueError("Each label pattern must contain 1 to 200 characters")
+            try:
+                compile_label_pattern(label)
+            except (ValueError, TypeError) as exc:
+                raise ValueError(f"Invalid regular expression {label!r}: {exc}") from exc
+            if label not in normalized:
+                normalized.append(label)
+        if not normalized:
+            raise ValueError("Choose at least one label pattern")
+        return normalized
+
+
+class SubscriptionPreviewIssueRead(UTCResponseModel):
+    issue_number: int
+    title: str
+    html_url: str
+    matched_label: str
+    trigger_type: Literal["created", "label_added", "unassigned", "reopened"]
+    trigger_reason: str
+    triggered_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    assigned_to: list[str]
+
+
+class SubscriptionPreviewRead(UTCResponseModel):
+    repo_full_name: str
+    window_days: int
+    window_started_at: datetime
+    generated_at: datetime
+    examined_issue_count: int
+    matching_issue_count: int
+    estimated_notification_count: int
+    is_partial: bool = False
+    warnings: list[str]
+    issues: list[SubscriptionPreviewIssueRead]
+
+
 class RepositoryLabelRead(UTCResponseModel):
     name: str
     color: str = ""

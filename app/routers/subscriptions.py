@@ -26,6 +26,8 @@ from app.schemas import (
     ProductEventCreate,
     RepositoryLabelsRead,
     SubscriptionCreate,
+    SubscriptionPreviewCreate,
+    SubscriptionPreviewRead,
     SubscriptionRead,
     SubscriptionStatusResponse,
     TestDMRead,
@@ -39,6 +41,7 @@ from app.services.github import (
     fetch_repository_labels,
     validate_repository_label,
 )
+from app.services.preview import build_subscription_preview
 from app.token_crypto import TokenDecryptionError
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
@@ -49,6 +52,7 @@ MAX_LABELS_IN_LOOKUP_RESPONSE = 200
 REPOSITORY_LOOKUP_COOLDOWN_SECONDS = 2
 TEST_DM_COOLDOWN_SECONDS = 30
 SUBSCRIPTION_CREATE_COOLDOWN_SECONDS = 1
+SUBSCRIPTION_PREVIEW_COOLDOWN_SECONDS = 10
 MAX_TEST_DELIVERIES_PER_USER = 20
 _REPO_PART = re.compile(r"^[A-Za-z0-9_.-]+$")
 
@@ -452,6 +456,33 @@ async def create_subscription(
             detail="You already have a subscription for this repo + label combination.",
         )
     return subscription
+
+
+@router.post("/preview", response_model=SubscriptionPreviewRead)
+async def preview_subscription(
+    payload: SubscriptionPreviewCreate,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Show recent alerts a watch would have produced without saving it."""
+
+    await require_csrf_token(request)
+    _require_cooldown(
+        db,
+        user_id=current_user.id,
+        action="subscription_preview",
+        cooldown_seconds=SUBSCRIPTION_PREVIEW_COOLDOWN_SECONDS,
+    )
+    github_token = _github_token_or_reconnect(current_user)
+    try:
+        return await build_subscription_preview(
+            payload.repo_full_name,
+            payload.labels,
+            github_token,
+        )
+    except GitHubAPIError as exc:
+        _raise_github_http(exc)
 
 
 @router.post("/test-dm", response_model=TestDMRead)

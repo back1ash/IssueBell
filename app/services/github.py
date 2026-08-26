@@ -288,6 +288,80 @@ async def fetch_new_issues(
     )
 
 
+async def fetch_recent_issues_limited(
+    repo: str,
+    token: str,
+    since: datetime,
+    *,
+    limit: int = 300,
+    client: httpx.AsyncClient | None = None,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Return a bounded set of recently updated open issues for previews.
+
+    The boolean result is true when GitHub reported another page. Preview calls
+    must stay bounded even for very busy repositories, while the polling path
+    remains exhaustive and checkpoint-safe.
+    """
+
+    safe_limit = min(max(limit, 1), 500)
+    since_utc = since.replace(tzinfo=timezone.utc) if since.tzinfo is None else since
+    params: dict[str, Any] | None = {
+        "state": "open",
+        "per_page": min(100, safe_limit),
+        "sort": "updated",
+        "direction": "desc",
+        "since": since_utc.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    next_url: str | None = f"{GITHUB_API}/repos/{repo}/issues"
+    raw_issues: list[dict[str, Any]] = []
+    visited_urls: set[str] = set()
+    has_more = False
+
+    owns_client = client is None
+    if client is None:
+        client = httpx.AsyncClient(timeout=settings.outbound_http_timeout)
+    try:
+        while next_url and len(raw_issues) < safe_limit:
+            if next_url in visited_urls:
+                raise GitHubAPIError(f"GitHub returned a pagination loop for {repo}")
+            visited_urls.add(next_url)
+            response = await _get(
+                client,
+                next_url,
+                repo=repo,
+                token=token,
+                params=params,
+            )
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                raise GitHubAPIError(f"GitHub returned invalid JSON for {repo}") from exc
+            if not isinstance(payload, list):
+                raise GitHubAPIError(f"GitHub returned an invalid list response for {repo}")
+            raw_issues.extend(item for item in payload if isinstance(item, dict))
+            next_link = response.links.get("next", {}).get("url")
+            next_url = str(next_link) if next_link else None
+            params = None
+        has_more = next_url is not None or len(raw_issues) > safe_limit
+    finally:
+        if owns_client:
+            await client.aclose()
+
+    deduplicated: dict[str, dict[str, Any]] = {}
+    for issue in raw_issues[:safe_limit]:
+        if "pull_request" in issue:
+            continue
+        identity = str(issue.get("id") or issue.get("node_id") or issue.get("number"))
+        deduplicated[identity] = issue
+
+    issues = sorted(
+        deduplicated.values(),
+        key=lambda issue: issue.get("updated_at") or issue.get("created_at") or "",
+        reverse=True,
+    )
+    return issues, has_more
+
+
 async def fetch_issue_events(
     repo: str,
     issue_numbers: list[int],

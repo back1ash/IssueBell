@@ -1541,6 +1541,81 @@ html { scroll-behavior: smooth; }
 .inline-feedback--success { color: #15803d; }
 .inline-feedback--error { color: #b91c1c; }
 .form-error.inline-feedback--error { margin-top: 2px; }
+.watch-form-actions { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 9px; }
+.watch-form-actions .btn { justify-content: center; }
+.alert-preview {
+  padding: 16px;
+  border: 1px solid #c7d2fe;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fafaff, #f8fafc);
+}
+.alert-preview--loading { opacity: 0.78; }
+.alert-preview__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.alert-preview__eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: #6366f1;
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.alert-preview__heading h3 { color: #1e293b; font-size: 0.95rem; letter-spacing: -0.015em; }
+.alert-preview__count {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.alert-preview__summary { margin-top: 9px; color: #64748b; font-size: 0.75rem; line-height: 1.55; }
+.alert-preview__warnings {
+  margin: 11px 0 0;
+  padding: 9px 10px 9px 27px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+.alert-preview__warnings li + li { margin-top: 3px; }
+.alert-preview__issues { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; list-style: none; }
+.alert-preview-issue {
+  padding: 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+}
+.alert-preview-issue__header { min-width: 0; }
+.alert-preview-issue__title {
+  display: block;
+  overflow: hidden;
+  color: #312e81;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alert-preview-issue__reason { margin-top: 5px; color: #334155; font-size: 0.72rem; font-weight: 700; }
+.alert-preview-issue__meta { margin-top: 3px; color: #94a3b8; font-size: 0.65rem; line-height: 1.5; }
+.alert-preview__empty {
+  padding: 14px 11px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  text-align: center;
+}
+.alert-preview__note { margin-top: 10px; color: #94a3b8; font-size: 0.64rem; line-height: 1.45; }
 .repo-group { padding: 14px; }
 .repo-group__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 3px; }
 .repo-group__name { min-width: 0; }
@@ -1747,6 +1822,7 @@ html { scroll-behavior: smooth; }
   .panel { padding: 21px 18px; }
   .repo-picker { flex-direction: column; }
   .repo-picker__button { justify-content: center; }
+  .watch-form-actions { grid-template-columns: 1fr; }
   .panel-heading-row { flex-direction: column; gap: 4px; }
   .panel-heading-row__note { margin-top: 0; }
   .repo-group__header { align-items: flex-start; flex-direction: column; gap: 5px; }
