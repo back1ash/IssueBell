@@ -86,6 +86,10 @@ class PollStatusRead(UTCResponseModel):
     error_code: str | None = None
     error_message: str | None = None
     rate_limit_reset_at: datetime | None = None
+    last_examined_count: int = 0
+    last_actionable_count: int = 0
+    last_ignored_update_count: int = 0
+    last_event_failure_count: int = 0
 
 
 class DeliverySummaryRead(UTCResponseModel):
@@ -93,6 +97,7 @@ class DeliverySummaryRead(UTCResponseModel):
     pending_count: int = 0
     failed_count: int = 0
     dead_count: int = 0
+    cancelled_count: int = 0
     last_sent_at: datetime | None = None
 
 
@@ -113,6 +118,8 @@ class NotificationHistoryRead(UTCResponseModel):
     issue_id: str
     issue_number: int | None = None
     matched_label: str | None = None
+    trigger_type: str | None = None
+    trigger_event_id: str | None = None
     status: str
     attempt_count: int
     last_error: str | None = None

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 import httpx
@@ -9,6 +10,7 @@ from app.services.github import (
     GitHubRateLimitError,
     build_issue_message,
     compile_label_pattern,
+    fetch_issue_events,
     fetch_new_issues,
     match_label,
 )
@@ -71,6 +73,175 @@ async def test_fetch_new_issues_uses_updates_and_follows_pagination() -> None:
     assert requests[0].url.params["per_page"] == "100"
     assert requests[0].url.params["since"] == "2026-08-23T10:59:58Z"
     assert len(requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_issue_events_batches_recent_actionable_timeline_items() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repository": {
+                        "issue_42": {
+                            "timelineItems": {
+                                "nodes": [
+                                    {
+                                        "__typename": "LabeledEvent",
+                                        "id": "LE_901",
+                                        "createdAt": "2026-08-23T11:00:00Z",
+                                        "label": {"name": "help needed"},
+                                    }
+                                ],
+                                "pageInfo": {"hasNextPage": False, "endCursor": "end"},
+                            }
+                        }
+                    }
+                }
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        events_by_issue, failures = await fetch_issue_events(
+            "acme/project",
+            [42],
+            "token",
+            datetime(2026, 8, 23, 10, 59, 0),
+            client=client,
+        )
+
+    assert failures == {}
+    assert events_by_issue[42] == [
+        {
+            "id": "LE_901",
+            "event": "labeled",
+            "created_at": "2026-08-23T11:00:00Z",
+            "label": {"name": "help needed"},
+        }
+    ]
+    assert requests[0].url.path == "/graphql"
+    body = json.loads(requests[0].content)
+    assert "issue_42: issue(number: 42)" in body["query"]
+    assert body["variables"]["since"] == "2026-08-23T10:58:58+00:00"
+
+
+@pytest.mark.asyncio
+async def test_fetch_issue_events_isolates_one_graphql_field_failure() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "data": {
+                    "repository": {
+                        "issue_42": {
+                            "timelineItems": {
+                                "nodes": [],
+                                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                            }
+                        },
+                        "issue_43": None,
+                    }
+                },
+                "errors": [
+                    {
+                        "message": "Timeline is gone",
+                        "path": ["repository", "issue_43", "timelineItems"],
+                    }
+                ],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        events_by_issue, failures = await fetch_issue_events(
+            "acme/project",
+            [42, 43],
+            "token",
+            datetime(2026, 8, 23, 10, 59, 0),
+            client=client,
+        )
+
+    assert events_by_issue == {42: []}
+    assert failures == {43: "Timeline is gone"}
+
+
+@pytest.mark.asyncio
+async def test_fetch_issue_events_paginates_only_recent_actionable_events() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        body = json.loads(request.content)
+        if len(requests) == 1:
+            issue_data = {
+                "issue_42": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "__typename": "UnassignedEvent",
+                                "id": "UE_1",
+                                "createdAt": "2026-08-23T11:00:00Z",
+                            }
+                        ],
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor-1"},
+                    }
+                }
+            }
+        else:
+            assert body["variables"]["after"] == "cursor-1"
+            issue_data = {
+                "issue": {
+                    "timelineItems": {
+                        "nodes": [
+                            {
+                                "__typename": "ReopenedEvent",
+                                "id": "RE_2",
+                                "createdAt": "2026-08-23T11:01:00Z",
+                            }
+                        ],
+                        "pageInfo": {"hasNextPage": False, "endCursor": "cursor-2"},
+                    }
+                }
+            }
+        return httpx.Response(200, json={"data": {"repository": issue_data}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        events_by_issue, failures = await fetch_issue_events(
+            "acme/project",
+            [42],
+            "token",
+            datetime(2026, 8, 23, 10, 59, 0),
+            client=client,
+        )
+
+    assert failures == {}
+    assert [event["event"] for event in events_by_issue[42]] == [
+        "unassigned",
+        "reopened",
+    ]
+    assert len(requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_fetch_issue_events_surfaces_graphql_rate_limit() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1787472000"},
+            json={"data": None, "errors": [{"message": "API rate limit exceeded"}]},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(GitHubRateLimitError):
+            await fetch_issue_events(
+                "acme/project",
+                [42],
+                "token",
+                datetime(2026, 8, 23, 10, 59, 0),
+                client=client,
+            )
 
 
 @pytest.mark.asyncio

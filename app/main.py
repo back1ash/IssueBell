@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -30,8 +31,15 @@ from app.models import (
     User,
 )
 from app.routers import admin, auth, legal, subscriptions
+from app.schema_migrations import migrate_actionable_notifications
 from app.services.discord import DiscordDeliveryError, send_dm
-from app.services.github import GitHubAPIError, build_issue_message, fetch_new_issues, match_label
+from app.services.github import (
+    GitHubAPIError,
+    build_issue_message,
+    fetch_issue_events,
+    fetch_new_issues,
+    match_label,
+)
 from app.token_crypto import TokenDecryptionError, migrate_plaintext_tokens
 
 logger = logging.getLogger(__name__)
@@ -40,6 +48,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(mes
 # New reliability tables are additive, so create_all remains compatible with
 # existing SQLite and PostgreSQL installations. Existing columns are unchanged.
 Base.metadata.create_all(bind=engine)
+migrate_actionable_notifications(engine)
 migrate_plaintext_tokens(engine)
 
 DELIVERY_LEASE_SECONDS = 300
@@ -60,6 +69,148 @@ def _parse_github_timestamp(value: str | None) -> datetime | None:
         ).replace(tzinfo=None)
     except (TypeError, ValueError):
         return None
+
+
+def _subscription_cursor(subscription: Subscription) -> datetime | None:
+    return subscription.last_checked_at or subscription.created_at
+
+
+def _issue_labels(issue: dict[str, Any]) -> list[str]:
+    raw_labels = issue.get("labels")
+    if not isinstance(raw_labels, list):
+        return []
+    return [
+        str(label.get("name", ""))
+        for label in raw_labels
+        if isinstance(label, dict)
+    ]
+
+
+def _issue_is_assigned(issue: dict[str, Any]) -> bool:
+    return bool(issue.get("assignee") or issue.get("assignees"))
+
+
+def _select_issue_trigger(
+    issue: dict[str, Any],
+    subscriptions: list[Subscription],
+    events: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Select the latest actionable transition for one issue.
+
+    New issues are actionable only while unassigned. Existing issues become
+    actionable when a watched label is added or their assignee is removed.
+    Comment, title, and body updates do not produce any of these triggers.
+    """
+
+    issue_created_at = _parse_github_timestamp(issue.get("created_at"))
+    current_labels = _issue_labels(issue)
+    is_assigned = _issue_is_assigned(issue)
+    candidates: list[tuple[datetime, int, dict[str, Any]]] = []
+
+    for subscription in subscriptions:
+        cursor = _subscription_cursor(subscription)
+        matched_current_label = match_label(subscription.label, current_labels)
+        if (
+            not is_assigned
+            and matched_current_label is not None
+            and issue_created_at is not None
+            and (cursor is None or issue_created_at >= cursor.replace(microsecond=0))
+        ):
+            candidates.append(
+                (
+                    issue_created_at,
+                    0,
+                    {
+                        "key": "created",
+                        "reason": "created",
+                        "matched_label": matched_current_label,
+                    },
+                )
+            )
+
+        for event in events:
+            event_at = _parse_github_timestamp(event.get("created_at"))
+            if event_at is None or (
+                cursor is not None and event_at < cursor.replace(microsecond=0)
+            ):
+                continue
+
+            event_type = event.get("event")
+            event_id = str(
+                event.get("id")
+                or event.get("node_id")
+                or f"{event_type}:{event.get('created_at')}"
+            )
+            if event_type == "labeled":
+                # GitHub records labels supplied during issue creation at the
+                # same second as the issue. An assigned new issue should not
+                # alert for those initial labels, but a later help label should.
+                if (
+                    is_assigned
+                    and issue_created_at is not None
+                    and event_at <= issue_created_at
+                ):
+                    continue
+                raw_label = event.get("label")
+                event_label = (
+                    str(raw_label.get("name", ""))
+                    if isinstance(raw_label, dict)
+                    else ""
+                )
+                if not any(
+                    event_label.casefold() == current_label.casefold()
+                    for current_label in current_labels
+                ):
+                    continue
+                matched_event_label = match_label(subscription.label, [event_label])
+                if matched_event_label is not None:
+                    candidates.append(
+                        (
+                            event_at,
+                            2,
+                            {
+                                "key": f"event:{event_id}",
+                                "reason": "label_added",
+                                "matched_label": matched_event_label,
+                            },
+                        )
+                    )
+            elif (
+                event_type == "unassigned"
+                and not is_assigned
+                and matched_current_label is not None
+            ):
+                candidates.append(
+                    (
+                        event_at,
+                        1,
+                        {
+                            "key": f"event:{event_id}",
+                            "reason": "unassigned",
+                            "matched_label": matched_current_label,
+                        },
+                    )
+                )
+            elif (
+                event_type == "reopened"
+                and not is_assigned
+                and matched_current_label is not None
+            ):
+                candidates.append(
+                    (
+                        event_at,
+                        1,
+                        {
+                            "key": f"event:{event_id}",
+                            "reason": "reopened",
+                            "matched_label": matched_current_label,
+                        },
+                    )
+                )
+
+    if not candidates:
+        return None
+    return max(candidates, key=lambda candidate: (candidate[0], candidate[1]))[2]
 
 
 def _load_or_create_poll_state(
@@ -110,6 +261,10 @@ def _record_poll_success(
     repo: str,
     checked_at: datetime,
     subscriptions_for_repo: list[Subscription],
+    examined_count: int = 0,
+    actionable_count: int = 0,
+    ignored_update_count: int = 0,
+    event_failure_count: int = 0,
 ) -> None:
     state = _load_or_create_poll_state(db, user_id, repo)
     state.last_attempt_at = checked_at
@@ -117,6 +272,10 @@ def _record_poll_success(
     state.error_code = None
     state.error_message = None
     state.rate_limit_reset_at = None
+    state.last_examined_count = examined_count
+    state.last_actionable_count = actionable_count
+    state.last_ignored_update_count = ignored_update_count
+    state.last_event_failure_count = event_failure_count
     for subscription in subscriptions_for_repo:
         subscription.last_checked_at = checked_at
     db.commit()
@@ -129,8 +288,18 @@ def _enqueue_issue_delivery(
     repo: str,
     issue: dict[str, Any],
     matched_label: str,
+    trigger_key: str = "created",
+    trigger_reason: str = "created",
 ) -> NotificationDelivery:
-    issue_id = str(issue.get("id") or issue.get("node_id") or issue.get("number"))
+    source_issue_id = str(issue.get("id") or issue.get("node_id") or issue.get("number"))
+    trigger_event_id = (
+        trigger_key.removeprefix("event:")
+        if trigger_key.startswith("event:")
+        else trigger_key
+    )
+    # Keep the legacy unique boundary collision-free while the explicit trigger
+    # fields provide the public identity and long-term idempotency boundary.
+    issue_id = f"{source_issue_id}:{trigger_reason}:{trigger_event_id}"
     existing = db.query(NotificationDelivery).filter(
         NotificationDelivery.user_id == user_id,
         NotificationDelivery.repo_full_name == repo,
@@ -145,9 +314,17 @@ def _enqueue_issue_delivery(
         delivery_type="issue",
         repo_full_name=repo,
         issue_id=issue_id,
+        source_issue_id=source_issue_id,
+        trigger_type=trigger_reason,
+        trigger_event_id=trigger_event_id,
         issue_number=issue_number if isinstance(issue_number, int) else None,
         matched_label=matched_label,
-        message=build_issue_message(issue, repo, matched_label),
+        message=build_issue_message(
+            issue,
+            repo,
+            matched_label,
+            trigger_reason=trigger_reason,
+        ),
         status="pending",
         next_attempt_at=_utcnow(),
     )
@@ -342,48 +519,94 @@ async def poll_all_users() -> None:
                 since = min(cursor_ats) if cursor_ats else (
                     poll_started_at - timedelta(seconds=settings.poll_interval)
                 )
+                poll_metrics = {
+                    "examined_count": 0,
+                    "actionable_count": 0,
+                    "ignored_update_count": 0,
+                    "event_failure_count": 0,
+                }
 
                 try:
-                    issues = await fetch_new_issues(repo, github_token, since)
-                    for issue in issues:
-                        updated_at = _parse_github_timestamp(
-                            issue.get("updated_at") or issue.get("created_at")
+                    async with httpx.AsyncClient(
+                        timeout=settings.outbound_http_timeout
+                    ) as github_client:
+                        issues = await fetch_new_issues(
+                            repo,
+                            github_token,
+                            since,
+                            client=github_client,
                         )
-                        # GitHub timestamps have one-second precision. Floor each
-                        # checkpoint to avoid skipping an update in the same second.
-                        eligible_subscriptions = [
-                            subscription
-                            for subscription in repo_subscriptions
-                            if subscription.last_checked_at is None
-                            or updated_at is None
-                            or updated_at
-                            >= subscription.last_checked_at.replace(microsecond=0)
-                        ]
-                        issue_labels = [
-                            str(label.get("name", ""))
-                            for label in issue.get("labels", [])
-                            if isinstance(label, dict)
-                        ]
-                        first_match = next(
-                            (
-                                (subscription, matched)
-                                for subscription in eligible_subscriptions
-                                if (
-                                    matched := match_label(subscription.label, issue_labels)
+                        poll_metrics["examined_count"] = len(issues)
+                        event_candidates: dict[int, dict[str, Any]] = {}
+
+                        for issue in issues:
+                            issue_labels = _issue_labels(issue)
+                            if not any(
+                                match_label(subscription.label, issue_labels) is not None
+                                for subscription in repo_subscriptions
+                            ):
+                                continue
+
+                            trigger = _select_issue_trigger(
+                                issue,
+                                repo_subscriptions,
+                                events=[],
+                            )
+                            if trigger is not None:
+                                _enqueue_issue_delivery(
+                                    db,
+                                    user_id=user_id,
+                                    repo=repo,
+                                    issue=issue,
+                                    matched_label=trigger["matched_label"],
+                                    trigger_key=trigger["key"],
+                                    trigger_reason=trigger["reason"],
                                 )
-                                is not None
-                            ),
-                            None,
+                                poll_metrics["actionable_count"] += 1
+                                continue
+
+                            issue_number = issue.get("number")
+                            if isinstance(issue_number, int):
+                                event_candidates[issue_number] = issue
+
+                        events_by_issue, event_failures = await fetch_issue_events(
+                            repo,
+                            list(event_candidates),
+                            github_token,
+                            since,
+                            client=github_client,
                         )
-                        if first_match is not None:
-                            _, matched_label = first_match
+                        poll_metrics["event_failure_count"] = len(event_failures)
+                        for issue_number, message in event_failures.items():
+                            logger.warning(
+                                "Skipping event evaluation for %s#%s: %s",
+                                repo,
+                                issue_number,
+                                message,
+                            )
+
+                        for issue_number, issue in event_candidates.items():
+                            if issue_number in event_failures:
+                                continue
+                            trigger = _select_issue_trigger(
+                                issue,
+                                repo_subscriptions,
+                                events_by_issue.get(issue_number, []),
+                            )
+                            if trigger is None:
+                                poll_metrics["ignored_update_count"] += 1
+                                continue
+
                             _enqueue_issue_delivery(
                                 db,
                                 user_id=user_id,
                                 repo=repo,
                                 issue=issue,
-                                matched_label=matched_label,
+                                matched_label=trigger["matched_label"],
+                                trigger_key=trigger["key"],
+                                trigger_reason=trigger["reason"],
                             )
+                            poll_metrics["actionable_count"] += 1
                 except GitHubAPIError as exc:
                     _record_poll_failure(
                         db,
@@ -416,6 +639,7 @@ async def poll_all_users() -> None:
                     repo=repo,
                     checked_at=poll_started_at,
                     subscriptions_for_repo=repo_subscriptions,
+                    **poll_metrics,
                 )
 
     except Exception as exc:
@@ -469,7 +693,7 @@ async def lifespan(app: FastAPI):
         logger.info("Scheduler stopped")
 
 
-app = FastAPI(title="IssueBell", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="IssueBell", version="0.4.0", lifespan=lifespan)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,

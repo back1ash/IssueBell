@@ -587,8 +587,9 @@ function applyMonitoringStatus(statuses, isGithubConnected = githubConnected) {
     byRepo.get(key).push(status);
     const chip = [...document.querySelectorAll(".label-chip")].find((item) => String(item.dataset.id) === String(status.id));
     if (chip) {
-      chip.classList.toggle("label-chip--error", Boolean(status.poll?.error_code));
-      chip.title = status.poll?.error_message || "";
+      const partialFailure = (status.poll?.last_event_failure_count || 0) > 0;
+      chip.classList.toggle("label-chip--error", Boolean(status.poll?.error_code) || partialFailure);
+      chip.title = status.poll?.error_message || (partialFailure ? "Some issue timelines were unavailable during the last check." : "");
     }
   });
 
@@ -598,6 +599,8 @@ function applyMonitoringStatus(statuses, isGithubConnected = githubConnected) {
     const errors = repoStatuses.filter((status) => status.poll?.error_code);
     const reconnectRequired = !isGithubConnected || errors.some((status) => reconnectCodes.has(status.poll?.error_code));
     const deliveryProblem = repoStatuses.some((status) => (status.delivery?.dead_count || 0) > 0 || (status.delivery?.failed_count || 0) > 0);
+    const eventFailureCount = Math.max(...repoStatuses.map((status) => status.poll?.last_event_failure_count || 0));
+    const partialEventFailure = eventFailureCount > 0;
     const candidates = repoStatuses
       .flatMap((status) => [status.last_checked_at, status.poll?.last_success_at, status.poll?.last_attempt_at])
       .filter(Boolean)
@@ -610,17 +613,21 @@ function applyMonitoringStatus(statuses, isGithubConnected = githubConnected) {
       time.className = "relative-time";
       time.dateTime = latest;
       meta.appendChild(time);
+      const poll = repoStatuses[0]?.poll;
+      const actionable = poll?.last_actionable_count || 0;
+      const ignored = poll?.last_ignored_update_count || 0;
+      meta.append(document.createTextNode(` · ${actionable} actionable · ${ignored} routine update${ignored === 1 ? "" : "s"} ignored`));
       updateRelativeTime(time);
     }
     const state = group.querySelector(".watch-state");
     if (state) state.innerHTML = reconnectRequired
       ? '<span class="status-dot status-dot--warning"></span> Paused'
-      : errors.length || deliveryProblem
+      : errors.length || deliveryProblem || partialEventFailure
         ? '<span class="status-dot status-dot--warning"></span> Needs attention'
       : '<span class="status-dot status-dot--healthy"></span> Watching';
     const errorElement = group.querySelector(".repo-group__error");
     if (errorElement) {
-      errorElement.hidden = !errors.length && !reconnectRequired;
+      errorElement.hidden = !errors.length && !reconnectRequired && !deliveryProblem && !partialEventFailure;
       errorElement.replaceChildren();
       if (reconnectRequired) {
         errorElement.append(document.createTextNode("GitHub authorization needs attention. "));
@@ -636,13 +643,15 @@ function applyMonitoringStatus(statuses, isGithubConnected = githubConnected) {
         link.href = "#test-dm-btn";
         link.textContent = "Run a test DM";
         errorElement.append(link);
+      } else if (partialEventFailure) {
+        errorElement.textContent = `${eventFailureCount} issue timeline${eventFailureCount === 1 ? " was" : "s were"} unavailable during the last check. Other issues were still checked.`;
       }
     }
   });
 
   const summary = document.getElementById("monitor-summary");
   if (summary) {
-    const errorCount = statuses.filter((status) => status.poll?.error_code || (status.delivery?.dead_count || 0) > 0 || (status.delivery?.failed_count || 0) > 0).length;
+    const errorCount = statuses.filter((status) => status.poll?.error_code || (status.poll?.last_event_failure_count || 0) > 0 || (status.delivery?.dead_count || 0) > 0 || (status.delivery?.failed_count || 0) > 0).length;
     const reconnectRequired = !isGithubConnected || statuses.some((status) => reconnectCodes.has(status.poll?.error_code));
     const dotClass = reconnectRequired || errorCount ? "status-dot--warning" : statuses.length ? "status-dot--healthy" : "status-dot--idle";
     const label = reconnectRequired && statuses.length

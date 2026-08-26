@@ -16,7 +16,7 @@ def test_landing_focuses_on_features_and_diverse_starter_packs() -> None:
     assert "about every 3 minutes" in html
     for feature in (
         "Choose real repository labels",
-        "Catch labels added later",
+        "Alert on actionable changes",
         "Test and monitor delivery",
     ):
         assert feature in html

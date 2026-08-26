@@ -85,9 +85,11 @@ class Subscription(Base):
 class NotificationDelivery(Base):
     """Durable notification outbox and delivery history.
 
-    A GitHub issue is delivered at most once per user and repository.  Failed
-    attempts remain in this table so the scheduler can retry them without
-    relying on the issue being returned by a later GitHub poll.
+    Each actionable GitHub issue transition is delivered at most once per user
+    and repository. The source issue and trigger metadata remain separate for
+    history/API consumers; ``issue_id`` is retained as a legacy-compatible
+    delivery key. Failed attempts remain in this table so the scheduler can
+    retry them without relying on a later GitHub poll.
     """
 
     __tablename__ = "notification_deliveries"
@@ -98,6 +100,14 @@ class NotificationDelivery(Base):
             "issue_id",
             name="uq_notification_delivery_user_repo_issue",
         ),
+        UniqueConstraint(
+            "user_id",
+            "repo_full_name",
+            "source_issue_id",
+            "trigger_type",
+            "trigger_event_id",
+            name="uq_notification_delivery_actionable_trigger",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -107,6 +117,9 @@ class NotificationDelivery(Base):
     delivery_type: Mapped[str] = mapped_column(String, nullable=False, default="issue")
     repo_full_name: Mapped[str] = mapped_column(String, nullable=False, index=True)
     issue_id: Mapped[str] = mapped_column(String, nullable=False)
+    source_issue_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    trigger_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    trigger_event_id: Mapped[str | None] = mapped_column(String, nullable=True)
     issue_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     matched_label: Mapped[str | None] = mapped_column(String, nullable=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -145,6 +158,14 @@ class RepositoryPollState(Base):
     error_code: Mapped[str | None] = mapped_column(String, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     rate_limit_reset_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_examined_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_actionable_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_ignored_update_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    last_event_failure_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now()
     )

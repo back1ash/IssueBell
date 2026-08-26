@@ -14,6 +14,7 @@ from app.config import settings
 
 
 GITHUB_API = "https://api.github.com"
+GITHUB_GRAPHQL_API = "https://api.github.com/graphql"
 _GH_HEADERS = {
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -241,8 +242,9 @@ async def fetch_new_issues(
     """Return open issues updated since ``since``.
 
     Polling by ``updated_at`` (rather than ``created_at``) is intentional: an
-    issue that receives a matching label after it was opened must be evaluated
-    again. Persistent delivery idempotency is handled by the caller.
+    issue that receives a matching label or becomes unassigned after it was
+    opened must be evaluated again. The caller verifies the corresponding issue
+    event before enqueueing a notification.
     """
 
     params: dict[str, Any] = {
@@ -283,6 +285,292 @@ async def fetch_new_issues(
     return sorted(
         deduplicated.values(),
         key=lambda issue: issue.get("updated_at") or issue.get("created_at") or "",
+    )
+
+
+async def fetch_issue_events(
+    repo: str,
+    issue_numbers: list[int],
+    token: str,
+    since: datetime,
+    *,
+    client: httpx.AsyncClient | None = None,
+) -> tuple[dict[int, list[dict[str, Any]]], dict[int, str]]:
+    """Return recent actionable events for several issues in bounded batches.
+
+    GraphQL's ``timelineItems(since:)`` avoids replaying the complete history of
+    old issues. Field-level failures are returned per issue so one unavailable
+    timeline cannot block the rest of a repository poll.
+    """
+
+    if not issue_numbers:
+        return {}, {}
+    owner, name = repo.split("/", 1)
+    owns_client = client is None
+    if client is None:
+        client = httpx.AsyncClient(timeout=settings.outbound_http_timeout)
+
+    events_by_issue: dict[int, list[dict[str, Any]]] = {}
+    failures: dict[int, str] = {}
+    since_utc = since.replace(tzinfo=timezone.utc) if since.tzinfo is None else since
+    since_value = (since_utc - timedelta(seconds=2)).astimezone(timezone.utc).isoformat()
+    try:
+        for offset in range(0, len(issue_numbers), 25):
+            batch = list(dict.fromkeys(issue_numbers[offset : offset + 25]))
+            aliases = "\n".join(
+                f"issue_{number}: issue(number: {number}) {{ ...ActionableEvents }}"
+                for number in batch
+            )
+            query = f"""
+                query($owner: String!, $name: String!, $since: DateTime!) {{
+                  repository(owner: $owner, name: $name) {{
+                    {aliases}
+                  }}
+                }}
+                fragment ActionableEvents on Issue {{
+                  timelineItems(
+                    first: 100
+                    since: $since
+                    itemTypes: [LABELED_EVENT, UNASSIGNED_EVENT, REOPENED_EVENT]
+                  ) {{
+                    nodes {{
+                      __typename
+                      ... on LabeledEvent {{ id createdAt label {{ name }} }}
+                      ... on UnassignedEvent {{ id createdAt }}
+                      ... on ReopenedEvent {{ id createdAt }}
+                    }}
+                    pageInfo {{ hasNextPage endCursor }}
+                  }}
+                }}
+            """
+            payload = await _graphql_request(
+                client,
+                query,
+                variables={"owner": owner, "name": name, "since": since_value},
+                repo=repo,
+                token=token,
+            )
+            data = payload.get("data")
+            repository = data.get("repository") if isinstance(data, dict) else None
+            if not isinstance(repository, dict):
+                raise GitHubRepositoryNotFoundError(
+                    f"Repository {repo!r} was not found or is not accessible"
+                )
+
+            batch_failures = _graphql_issue_failures(payload, batch)
+            if any(
+                not _graphql_error_has_issue_path(error)
+                for error in payload.get("errors", [])
+                if isinstance(error, dict)
+            ):
+                raise GitHubAPIError(
+                    f"GitHub returned an unscoped GraphQL error for {repo}"
+                )
+            failures.update(batch_failures)
+            for number in batch:
+                if number in batch_failures:
+                    continue
+                issue_data = repository.get(f"issue_{number}")
+                if not isinstance(issue_data, dict):
+                    failures[number] = "Issue timeline is unavailable"
+                    continue
+                timeline = issue_data.get("timelineItems")
+                if not isinstance(timeline, dict):
+                    failures[number] = "Issue timeline is unavailable"
+                    continue
+                events_by_issue[number] = _normalize_graphql_events(
+                    timeline.get("nodes")
+                )
+                page_info = timeline.get("pageInfo")
+                if isinstance(page_info, dict) and page_info.get("hasNextPage"):
+                    more_events = await _fetch_remaining_issue_events(
+                        client,
+                        repo=repo,
+                        owner=owner,
+                        name=name,
+                        issue_number=number,
+                        token=token,
+                        since=since_value,
+                        after=str(page_info.get("endCursor") or ""),
+                    )
+                    events_by_issue[number].extend(more_events)
+    finally:
+        if owns_client:
+            await client.aclose()
+
+    return events_by_issue, failures
+
+
+async def _graphql_request(
+    client: httpx.AsyncClient,
+    query: str,
+    *,
+    variables: dict[str, Any],
+    repo: str,
+    token: str,
+) -> dict[str, Any]:
+    try:
+        response = await client.post(
+            GITHUB_GRAPHQL_API,
+            headers=_headers(token),
+            json={"query": query, "variables": variables},
+        )
+    except httpx.RequestError as exc:
+        raise GitHubTransientError(f"GitHub GraphQL request failed: {exc}") from exc
+    _raise_for_github_error(response, repo)
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise GitHubAPIError(f"GitHub returned invalid GraphQL JSON for {repo}") from exc
+    if not isinstance(payload, dict):
+        raise GitHubAPIError(f"GitHub returned an invalid GraphQL response for {repo}")
+    error_messages = [
+        str(error.get("message", ""))
+        for error in payload.get("errors", [])
+        if isinstance(error, dict)
+    ]
+    if any("rate limit" in message.casefold() for message in error_messages):
+        raise GitHubRateLimitError(
+            error_messages[0] or "GitHub GraphQL rate limit exceeded",
+            rate_limit_reset_at=_parse_rate_limit_reset(response),
+        )
+    if any("authentication" in message.casefold() for message in error_messages):
+        raise GitHubAuthenticationError("GitHub authorization is invalid or expired")
+    return payload
+
+
+def _graphql_issue_failures(
+    payload: dict[str, Any], issue_numbers: list[int]
+) -> dict[int, str]:
+    failures: dict[int, str] = {}
+    valid_numbers = set(issue_numbers)
+    for error in payload.get("errors", []):
+        if not isinstance(error, dict):
+            continue
+        path = error.get("path")
+        if not isinstance(path, list):
+            continue
+        alias = next(
+            (part for part in path if isinstance(part, str) and part.startswith("issue_")),
+            None,
+        )
+        if alias is None:
+            continue
+        try:
+            number = int(alias.removeprefix("issue_"))
+        except ValueError:
+            continue
+        if number in valid_numbers:
+            failures[number] = str(error.get("message") or "Issue timeline is unavailable")[:300]
+    return failures
+
+
+def _graphql_error_has_issue_path(error: dict[str, Any]) -> bool:
+    path = error.get("path")
+    return isinstance(path, list) and any(
+        isinstance(part, str) and part.startswith("issue_") for part in path
+    )
+
+
+def _normalize_graphql_events(nodes: object) -> list[dict[str, Any]]:
+    if not isinstance(nodes, list):
+        return []
+    event_names = {
+        "LabeledEvent": "labeled",
+        "UnassignedEvent": "unassigned",
+        "ReopenedEvent": "reopened",
+    }
+    events: list[dict[str, Any]] = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        event_name = event_names.get(str(node.get("__typename")))
+        if event_name is None:
+            continue
+        event = {
+            "id": node.get("id"),
+            "event": event_name,
+            "created_at": node.get("createdAt"),
+        }
+        if event_name == "labeled" and isinstance(node.get("label"), dict):
+            event["label"] = {"name": str(node["label"].get("name", ""))}
+        events.append(event)
+    return events
+
+
+async def _fetch_remaining_issue_events(
+    client: httpx.AsyncClient,
+    *,
+    repo: str,
+    owner: str,
+    name: str,
+    issue_number: int,
+    token: str,
+    since: str,
+    after: str,
+) -> list[dict[str, Any]]:
+    query = """
+        query(
+          $owner: String!, $name: String!, $number: Int!,
+          $since: DateTime!, $after: String!
+        ) {
+          repository(owner: $owner, name: $name) {
+            issue(number: $number) {
+              timelineItems(
+                first: 100
+                after: $after
+                since: $since
+                itemTypes: [LABELED_EVENT, UNASSIGNED_EVENT, REOPENED_EVENT]
+              ) {
+                nodes {
+                  __typename
+                  ... on LabeledEvent { id createdAt label { name } }
+                  ... on UnassignedEvent { id createdAt }
+                  ... on ReopenedEvent { id createdAt }
+                }
+                pageInfo { hasNextPage endCursor }
+              }
+            }
+          }
+        }
+    """
+    events: list[dict[str, Any]] = []
+    cursor = after
+    for _ in range(10):
+        payload = await _graphql_request(
+            client,
+            query,
+            variables={
+                "owner": owner,
+                "name": name,
+                "number": issue_number,
+                "since": since,
+                "after": cursor,
+            },
+            repo=repo,
+            token=token,
+        )
+        if payload.get("errors"):
+            raise GitHubAPIError(
+                f"GitHub could not finish event pagination for {repo}#{issue_number}"
+            )
+        data = payload.get("data")
+        repository = data.get("repository") if isinstance(data, dict) else None
+        issue_data = repository.get("issue") if isinstance(repository, dict) else None
+        if not isinstance(issue_data, dict):
+            return events
+        timeline = issue_data.get("timelineItems")
+        if not isinstance(timeline, dict):
+            return events
+        events.extend(_normalize_graphql_events(timeline.get("nodes")))
+        page_info = timeline.get("pageInfo")
+        if not isinstance(page_info, dict) or not page_info.get("hasNextPage"):
+            return events
+        cursor = str(page_info.get("endCursor") or "")
+        if not cursor:
+            return events
+    raise GitHubAPIError(
+        f"GitHub returned more than 1,100 actionable events for {repo}#{issue_number}"
     )
 
 
@@ -386,7 +674,12 @@ def match_label(pattern: str, issue_labels: list[str]) -> str | None:
     return None
 
 
-def build_issue_message(issue: dict[str, Any], repo: str, matched_label: str) -> str:
+def build_issue_message(
+    issue: dict[str, Any],
+    repo: str,
+    matched_label: str,
+    trigger_reason: str = "created",
+) -> str:
     def escape_markdown(value: object) -> str:
         return re.sub(r"([\\`*_{}\[\]()<>#+\-.!|])", r"\\\1", str(value))
 
@@ -407,14 +700,41 @@ def build_issue_message(issue: dict[str, Any], repo: str, matched_label: str) ->
         if isinstance(raw_labels, list)
         else ""
     )
+    raw_assignees = issue.get("assignees")
+    assignee_names = (
+        [
+            escape_markdown(assignee.get("login") or "unknown")
+            for assignee in raw_assignees
+            if isinstance(assignee, dict)
+        ]
+        if isinstance(raw_assignees, list)
+        else []
+    )
+    if not assignee_names and isinstance(issue.get("assignee"), dict):
+        assignee_names = [escape_markdown(issue["assignee"].get("login") or "unknown")]
+
+    safe_matched_label = escape_markdown(matched_label)
+    reason = {
+        "label_added": f"`{safe_matched_label}` was just added",
+        "unassigned": "The issue just became unassigned",
+        "reopened": "The issue was reopened and is unassigned",
+        "created": "New unassigned issue matching your watch",
+    }.get(trigger_reason, "The issue became actionable")
+    assignment = (
+        f"Assigned to **{', '.join(assignee_names)}**"
+        if assignee_names
+        else "Unassigned"
+    )
     # Build a trusted GitHub link instead of embedding provider-supplied URL
     # text that could turn IssueBell DMs into phishing links.
     url = f"https://github.com/{repo}/issues/{number}" if number != "?" else ""
 
     return (
-        f"\U0001f514 **New issue on `{repo}`**\n"
+        f"\U0001f514 **Issue alert on `{repo}`**\n"
         f"**#{number} \u2014 {title}**\n"
+        f"\u2728 {reason}\n"
         f"\U0001f464 Opened by **{author}**\n"
+        f"\U0001f465 {assignment}\n"
         f"\U0001f3f7\ufe0f Labels: {labels or '\u2014'}\n"
         f"\U0001f517 {url}"
     )

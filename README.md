@@ -16,6 +16,8 @@ This is the founder's case—not a customer testimonial—and it captures the ou
 - Loads the repository's real labels before you create a watch
 - Offers focused Kubernetes, JupyterHub, and GitHub Docs starter packs
 - Sends private Discord DMs instead of a noisy all-activity feed
+- Alerts on new unassigned issues, newly applied watched labels, issues that become unassigned, and matching issues that reopen
+- Ignores comment-only, title, and body updates
 - Shows when each watch was last checked and whether polling needs attention
 - Lets you send a test DM before waiting for a real match
 - Requires no webhook, repository installation, or admin access
@@ -29,7 +31,7 @@ GitHub public repository
         │
         │ check active watches about every 3 minutes
         ▼
-label rule matches a new or newly labelled issue
+label rule matches an actionable issue transition
         │
         ▼
 private Discord DM → review context → contribute

@@ -155,8 +155,8 @@
           </article>
           <article class="capability-card">
             <span class="capability-card__icon">↻</span>
-            <h3>Catch labels added later</h3>
-            <p>Updated issues are checked too, so a useful label added after creation can still reach you.</p>
+            <h3>Alert on actionable changes</h3>
+            <p>Get notified when a watched label is added, an issue becomes unassigned, or a matching issue is reopened—not for comment-only edits.</p>
           </article>
           <article class="capability-card">
             <span class="capability-card__icon">✓</span>
@@ -252,7 +252,7 @@
       <div>
         <span class="section-kicker">Your personal issue watchlist</span>
         <h1>Watch the work that matters.</h1>
-        <p>IssueBell checks active subscriptions about every 3 minutes and sends matching issues to your Discord DMs.</p>
+        <p>IssueBell checks active subscriptions about every 3 minutes. It alerts on new unassigned issues, watched labels added later, issues that become unassigned, and matching issues that reopen. Comment-only, title, and body edits are ignored.</p>
       </div>
       <div class="monitor-pill" id="monitor-summary" aria-live="polite">
         <span class="status-dot {% if (not github_connected or github_reconnect_required) and subscriptions %}status-dot--warning{% elif subscriptions %}status-dot--healthy{% else %}status-dot--idle{% endif %}"></span>
@@ -433,6 +433,6 @@
   </div>
   {% endif %}
 
-  <script src="/static/app.js?v=5"></script>
+  <script src="/static/app.js?v=6"></script>
 </body>
 </html>

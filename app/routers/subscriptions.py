@@ -242,6 +242,7 @@ def subscription_status(
                 "pending_count": 0,
                 "failed_count": 0,
                 "dead_count": 0,
+                "cancelled_count": 0,
                 "last_sent_at": None,
             },
         )
@@ -255,6 +256,8 @@ def subscription_status(
             summary["dead_count"] = int(summary["dead_count"]) + count
         elif status == "failed":
             summary["failed_count"] = int(summary["failed_count"]) + count
+        elif status == "cancelled":
+            summary["cancelled_count"] = int(summary["cancelled_count"]) + count
         else:
             summary["pending_count"] = int(summary["pending_count"]) + count
 
@@ -277,6 +280,10 @@ def subscription_status(
                     "error_code": state.error_code,
                     "error_message": state.error_message,
                     "rate_limit_reset_at": state.rate_limit_reset_at,
+                    "last_examined_count": state.last_examined_count,
+                    "last_actionable_count": state.last_actionable_count,
+                    "last_ignored_update_count": state.last_ignored_update_count,
+                    "last_event_failure_count": state.last_event_failure_count,
                 },
                 "delivery": summaries.get(
                     subscription.repo_full_name,
@@ -285,6 +292,7 @@ def subscription_status(
                         "pending_count": 0,
                         "failed_count": 0,
                         "dead_count": 0,
+                        "cancelled_count": 0,
                         "last_sent_at": None,
                     },
                 ),
@@ -307,13 +315,32 @@ def notification_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return (
+    deliveries = (
         db.query(NotificationDelivery)
         .filter(NotificationDelivery.user_id == current_user.id)
         .order_by(NotificationDelivery.created_at.desc())
         .limit(limit)
         .all()
     )
+    return [
+        {
+            "id": delivery.id,
+            "delivery_type": delivery.delivery_type,
+            "repo_full_name": delivery.repo_full_name,
+            "issue_id": delivery.source_issue_id or delivery.issue_id.split(":", 1)[0],
+            "issue_number": delivery.issue_number,
+            "matched_label": delivery.matched_label,
+            "trigger_type": delivery.trigger_type,
+            "trigger_event_id": delivery.trigger_event_id,
+            "status": delivery.status,
+            "attempt_count": delivery.attempt_count,
+            "last_error": delivery.last_error,
+            "last_attempt_at": delivery.last_attempt_at,
+            "sent_at": delivery.sent_at,
+            "created_at": delivery.created_at,
+        }
+        for delivery in deliveries
+    ]
 
 
 @router.get(
@@ -441,11 +468,15 @@ async def test_dm(
         cooldown_seconds=TEST_DM_COOLDOWN_SECONDS,
     )
     attempted_at = _utcnow()
+    test_event_id = str(uuid4())
     delivery = NotificationDelivery(
         user_id=current_user.id,
         delivery_type="test",
         repo_full_name="__test__",
-        issue_id=f"test:{uuid4()}",
+        issue_id=f"test:{test_event_id}",
+        source_issue_id="test",
+        trigger_type="test",
+        trigger_event_id=test_event_id,
         issue_number=None,
         matched_label=None,
         message=(
