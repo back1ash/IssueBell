@@ -2,9 +2,12 @@ name: CI & Deploy
 
 on:
   pull_request:
+    paths-ignore:
+      - "**/*.md"
   push:
     branches: [main]
     paths-ignore:
+      - "**/*.md"
       - "k8s/**" # Do not rebuild GitOps image-tag-only updates.
 
 permissions:
