@@ -8,6 +8,8 @@ data:
   GITHUB_REDIRECT_URI: "https://issuebell.com/auth/github/callback"
   POLL_INTERVAL: "180"
   SECURE_COOKIES: "true"
+  SESSION_MAX_AGE: "7776000"
+  SESSION_ABSOLUTE_MAX_AGE: "15552000"
   ALLOWED_HOSTS: "issuebell.com"
   OAUTH_HTTP_TIMEOUT: "10"
   OAUTH_STATE_MAX_AGE: "600"

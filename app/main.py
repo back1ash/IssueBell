@@ -549,7 +549,7 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,
     session_cookie="issuebell_session",
-    max_age=settings.session_max_age,
+    max_age=settings.session_absolute_max_age,
     same_site="lax",
     https_only=settings.secure_cookies,
 )
@@ -631,6 +631,7 @@ async def index(request: Request):
     user_subscriptions: list[Subscription] = []
     github_connected = False
     github_reconnect_required = False
+    had_login = request.session.get("user_id") is not None
 
     if request.session.get("user_id") is not None:
         db: Session = SessionLocal()
@@ -638,6 +639,7 @@ async def index(request: Request):
             user_id = auth.authenticated_user_id(request, db)
             user = db.get(User, user_id) if user_id is not None else None
             if user:
+                auth.renew_auth_session(request, db, user.id)
                 github_connected = user.github_id is not None
                 user_subscriptions = (
                     db.query(Subscription)
@@ -662,7 +664,12 @@ async def index(request: Request):
 
     csrf_token = auth.ensure_csrf_token(request) if user else ""
 
-    return templates.TemplateResponse(
+    session_expired = not user and (
+        request.cookies.get(auth.RETURNING_COOKIE) == "1"
+        or had_login
+        or ("issuebell_session" in request.cookies and not request.session)
+    )
+    response = templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
@@ -672,8 +679,14 @@ async def index(request: Request):
             "github_connected": github_connected,
             "github_reconnect_required": github_reconnect_required,
             "csrf_token": csrf_token,
+            "session_expired": session_expired,
         },
     )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["Vary"] = "Cookie"
+    if user or session_expired:
+        auth.remember_browser(response)
+    return response
 
 
 @app.get("/manage", response_class=HTMLResponse)

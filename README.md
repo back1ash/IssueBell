@@ -49,6 +49,20 @@ Connect Discord, connect GitHub, paste `owner/repo`, and choose one or more labe
 
 Local development uses SQLite by default. Set `DATABASE_URL` to PostgreSQL for a production deployment.
 
+Login sessions expire after 90 days without a dashboard visit (`SESSION_MAX_AGE`,
+in seconds). Each dashboard visit renews that window, up to 180 days after the
+Discord login (`SESSION_ABSOLUTE_MAX_AGE`). Background polling does not renew
+sessions. Expired sessions show a Discord sign-in prompt that returns to the
+watchlist. A non-identifying `issuebell_returning` cookie remembers this UI
+preference for one year; it grants no access and is removed on logout or account
+deletion. Logout immediately revokes the server session.
+
+Existing unexpired sessions adopt the new idle window on their next dashboard
+visit, retaining their original creation time for the absolute limit. Already
+expired sessions require sign-in. When upgrading, replace any old
+`SESSION_MAX_AGE=1209600` override, including in Kubernetes Secrets (which take
+precedence over the ConfigMap), with `7776000`.
+
 For production, use strong, independent session and token-encryption secrets, HTTPS callback URLs, and the health endpoints `/health/live` and `/health/ready`.
 
 When upgrading an existing deployment to encrypted OAuth-token storage, back up the database and use the provided `Recreate` deployment strategy. The migration is roll-forward only: do not roll back to an image that cannot read `fernet:v1:` token values.

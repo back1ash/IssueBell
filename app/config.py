@@ -25,7 +25,9 @@ class Settings(BaseSettings):
         default=False,
         validation_alias=AliasChoices("SECURE_COOKIES", "SESSION_HTTPS_ONLY"),
     )
-    session_max_age: int = Field(default=60 * 60 * 24 * 14, ge=300)
+    # Idle timeout, renewed on a dashboard visit (not background polling).
+    session_max_age: int = Field(default=60 * 60 * 24 * 90, ge=300)
+    session_absolute_max_age: int = Field(default=60 * 60 * 24 * 180, ge=300)
     # Comma-separated to keep environment configuration straightforward.
     allowed_hosts: str = "localhost,127.0.0.1,testserver"
     # Discord ID of the admin user (set via env var ADMIN_DISCORD_ID)

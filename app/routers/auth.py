@@ -32,6 +32,7 @@ STATE_MAX_AGE = settings.oauth_state_max_age
 CSRF_SESSION_KEY = "_csrf_token"
 OAUTH_STATES_SESSION_KEY = "_oauth_states"
 AUTH_SESSION_KEY = "_auth_session_id"
+RETURNING_COOKIE = "issuebell_returning"
 MAX_PENDING_STATES_PER_PROVIDER = 4
 
 
@@ -53,10 +54,12 @@ def authenticated_user_id(request: Request, db: Session) -> int | None:
         request.session.clear()
         return None
 
+    now = _utcnow()
     exists = db.query(AuthSession.id).filter(
         AuthSession.id == session_id,
         AuthSession.user_id == user_id,
-        AuthSession.expires_at > _utcnow(),
+        AuthSession.expires_at > now,
+        AuthSession.created_at > now - timedelta(seconds=settings.session_absolute_max_age),
     ).first()
     if exists is None:
         request.session.clear()
@@ -64,13 +67,59 @@ def authenticated_user_id(request: Request, db: Session) -> int | None:
     return user_id
 
 
+def renew_auth_session(request: Request, db: Session, user_id: int) -> None:
+    """Renew a verified dashboard visit, without extending the absolute limit.
+
+    Use a conditional update so a concurrent logout cannot revive a session.
+    This commits only the session update; callers must have no pending writes.
+    """
+    now = _utcnow()
+    session_id = request.session[AUTH_SESSION_KEY]
+    session = db.get(AuthSession, session_id)
+    if session is None:
+        return
+    expires_at = min(
+        now + timedelta(seconds=settings.session_max_age),
+        session.created_at + timedelta(seconds=settings.session_absolute_max_age),
+    )
+    updated = db.query(AuthSession).filter(
+        AuthSession.id == session_id,
+        AuthSession.user_id == user_id,
+        AuthSession.expires_at > now,
+        AuthSession.expires_at < expires_at,
+    ).update({AuthSession.expires_at: expires_at}, synchronize_session=False)
+    db.commit()
+    if updated:
+        # Explicitly modify the signed session so Starlette refreshes its cookie.
+        request.session[AUTH_SESSION_KEY] = session_id
+
+
+def remember_browser(response: Response) -> None:
+    # A non-identifying UI hint, never used to authorize a request. Outlives the
+    # auth cookie so an expired browser still gets the sign-in-again screen.
+    response.set_cookie(
+        RETURNING_COOKIE, "1", max_age=60 * 60 * 24 * 365,
+        httponly=True, secure=settings.secure_cookies, samesite="lax",
+    )
+
+
+def _signed_out_redirect(**params: str) -> RedirectResponse:
+    response = _success_redirect(**params)
+    response.delete_cookie(RETURNING_COOKIE)
+    return response
+
+
 def _create_auth_session(db: Session, user_id: int) -> str:
     session_id = secrets.token_urlsafe(32)
+    now = _utcnow()
     db.add(
         AuthSession(
             id=session_id,
             user_id=user_id,
-            expires_at=_utcnow() + timedelta(seconds=settings.session_max_age),
+            created_at=now,
+            expires_at=now + timedelta(seconds=min(
+                settings.session_max_age, settings.session_absolute_max_age,
+            )),
         )
     )
     # Opportunistic cleanup prevents expired login records growing forever.
@@ -394,7 +443,9 @@ async def discord_callback(
             # Signup remains usable when DMs are disabled or Discord is down.
             logger.warning("Welcome DM to %s failed (%s)", discord_id, type(exc).__name__)
 
-    return _success_redirect()
+    response = _success_redirect()
+    remember_browser(response)
+    return response
 
 
 # -- GitHub ------------------------------------------------------------------
@@ -632,7 +683,7 @@ async def delete_account(request: Request):
 
     request.session.clear()
     await _revoke_github_token(github_token)
-    return _success_redirect(account_deleted="1")
+    return _signed_out_redirect(account_deleted="1")
 
 
 @router.get("/delete-account", include_in_schema=False)
@@ -644,7 +695,7 @@ async def delete_account_get():
 async def logout(request: Request):
     if request.session.get("user_id") is None:
         request.session.clear()
-        return _success_redirect()
+        return _signed_out_redirect()
     await require_csrf_token(request)
     db = SessionLocal()
     try:
@@ -663,7 +714,7 @@ async def logout(request: Request):
     finally:
         db.close()
     request.session.clear()
-    return _success_redirect()
+    return _signed_out_redirect()
 
 
 @router.get("/logout", include_in_schema=False)

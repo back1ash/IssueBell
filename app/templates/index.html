@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IssueBell — GitHub label alerts in Discord</title>
   <meta name="description" content="Watch labels on any public GitHub repository and get a private Discord DM within minutes — without repository admin access or an all-activity feed." />
-  {% if user %}
+  {% if user or session_expired %}
   <meta name="robots" content="noindex, nofollow, noarchive" />
   {% else %}
   <link rel="canonical" href="https://issuebell.com/" />
@@ -26,7 +26,7 @@
   <meta name="theme-color" content="#6366f1" />
   {% if user %}<meta name="csrf-token" content="{{ csrf_token }}" />{% endif %}
   <link rel="stylesheet" href="/static/style.css?v=6" />
-  {% if not user %}
+  {% if not user and not session_expired %}
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -78,14 +78,28 @@
           <button type="submit" class="btn btn--ghost btn--sm">Log out</button>
         </form>
       {% else %}
-        <a href="/auth/login" class="btn btn--discord btn--sm">Watch a repo</a>
+        <a href="/auth/login" class="btn btn--discord btn--sm">{% if session_expired %}Continue with Discord{% else %}Watch a repo{% endif %}</a>
       {% endif %}
     </nav>
   </header>
 
   {% set error = request.query_params.get('error') %}
 
-  {% if not user %}
+  {% if not user and session_expired %}
+  <main class="landing">
+    <section class="landing-hero">
+      <div class="landing-shell">
+        <span class="hero__eyebrow">Your personal issue watchlist</span>
+        <h1 class="landing-hero__title">Your session has expired.</h1>
+        <p class="landing-hero__sub">Continue with Discord to return to your watchlist.</p>
+        {% if error %}
+        <div class="alert alert--error" role="alert">We could not complete sign-in. Please try again.</div>
+        {% endif %}
+        <a href="/auth/login" class="btn btn--discord">Continue with Discord</a>
+      </div>
+    </section>
+  </main>
+  {% elif not user %}
   <main class="landing">
     <section class="landing-hero">
       {% if error %}
