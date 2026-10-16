@@ -5,5 +5,6 @@ resources:
   - namespace.yaml
   - pvc.yaml
   - postgres.yaml
+  - postgres-backup-cronjob.yaml
   - deployment.yaml
   - service.yaml

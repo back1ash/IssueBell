@@ -20,6 +20,13 @@ env/
 .env
 .env.production
 
+# Terraform state and local provider metadata
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars
+**/*.auto.tfvars
+
 # Database
 *.db
 *.sqlite3
