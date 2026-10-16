@@ -2,6 +2,59 @@
 
 Argo CD는 `k8s/overlays/production` 경로를 감시합니다.
 
+## PostgreSQL Object Storage 백업
+
+`k8s/base/postgres-backup-cronjob.yaml`은 매일 03:00 UTC(한국 시간 12:00)에 PostgreSQL 16의 `issuebell` 데이터베이스를 custom-format 덤프로 만들고, OCI Object Storage의 비공개 `issuebell-db-backups` 버킷에 업로드한 뒤 원격 객체를 확인합니다. 덤프 파일은 Job Pod의 임시 볼륨에만 만들어집니다.
+
+### OCI 버킷 및 권한
+
+`terraform/objectstorage-backups`의 독립 Terraform root가 버킷과 권한을 관리합니다. 인프라 Terraform과 state가 분리되어 있어 여기서 apply해도 VM·네트워크 리소스에는 변경이 없습니다.
+
+- 이름: `issuebell-db-backups`
+- 공개 접근: 비공개(No Public Access)
+- 저장 등급: Standard
+- 리전: 인프라 Terraform의 `terraform.tfvars`에 설정된 `region`
+- 보존: `issuebell/postgresql/` prefix의 객체는 7일 후 삭제
+
+적용 방법과 Terraform 리소스는 [`terraform/objectstorage-backups/README.md`](../terraform/objectstorage-backups/README.md)를 참고하세요. Free Tier 포함량을 넘는 저장량이나 요청은 과금될 수 있으므로, 실제 백업 크기와 버킷 사용량을 확인하세요.
+
+### OCI 인증 준비
+
+업로더는 OCI CLI의 API Key 프로필을 사용합니다. Terraform 정책은 지정 API 사용자를 해당 버킷의 `issuebell/postgresql/` 경로에만 제한합니다. API 개인 키는 Git에 넣지 마세요.
+
+WSL Ubuntu에서 `/oracle/.oci/oci_api_key.pem`에 대응하는 Secret 볼륨 파일을 준비합니다. OCI 식별자 값은 인프라 저장소의 `terraform/terraform.tfvars`에서 가져오고, 파일은 Git에 추가하지 않습니다.
+
+```bash
+cat > "$HOME/.oci/issuebell-backup-config" <<'EOF'
+[DEFAULT]
+user=<user_ocid>
+fingerprint=<fingerprint>
+tenancy=<tenancy_ocid>
+region=<terraform.tfvars의 region>
+key_file=/oracle/.oci/oci_api_key.pem
+EOF
+chmod 600 "$HOME/.oci/issuebell-backup-config"
+
+kubectl -n issuebell create secret generic issuebell-backup-oci \
+  --from-file=config="$HOME/.oci/issuebell-backup-config" \
+  --from-file=oci_api_key.pem="$HOME/.oci/oci_api_key.pem" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+`<user_ocid>`, `<fingerprint>`, `<tenancy_ocid>`를 실제 값으로 바꿉니다. Config 파일의 `key_file` 경로는 컨테이너 안의 Secret 마운트 위치이므로 그대로 둡니다. 개인 키는 이 Secret을 통해 클러스터에 전달되며 저장소에는 커밋되지 않습니다.
+
+### 배포 및 확인
+
+Argo CD가 `k8s/overlays/production`을 동기화하면 ServiceAccount와 CronJob이 함께 배포됩니다. 첫 실행을 즉시 확인하려면:
+
+```bash
+kubectl -n issuebell create job --from=cronjob/issuebell-postgres-backup issuebell-backup-manual
+kubectl -n issuebell logs -f job/issuebell-backup-manual -c dump-postgres
+kubectl -n issuebell logs -f job/issuebell-backup-manual -c upload-to-object-storage
+```
+
+Object Storage에는 `issuebell/postgresql/issuebell-<UTC timestamp>.dump` 이름으로 백업이 쌓입니다. 복구할 때는 파일을 내려받은 뒤 PostgreSQL 16의 `pg_restore`를 사용합니다.
+
 ## 운영 Secret 생성
 
 운영 Secret은 Git에 커밋하지 않습니다. `.env.production.example`을 복사해 실제 값을 입력한 뒤 다음을 실행합니다.
