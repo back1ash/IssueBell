@@ -121,6 +121,7 @@
     }
     .tag--green { background: rgba(34,197,94,0.12); color: #15803d; }
     .tag--gray  { background: var(--surface-2); color: var(--text-muted); }
+    a.tag:hover { text-decoration: underline; }
 
     .expand-icon {
       display: inline-block;
@@ -385,11 +386,21 @@
         tr.appendChild(userCell);
 
         const githubCell = document.createElement('td');
-        githubCell.appendChild(
-          u.github_connected
-            ? textElement('span', 'tag tag--green', `✓ ${String(u.github_username ?? '')}`)
-            : textElement('span', 'tag tag--gray', 'Not connected'),
-        );
+        const githubUsername = String(u.github_username ?? '');
+        if (u.github_connected && /^[A-Za-z0-9-]+$/.test(githubUsername)) {
+          const profileLink = textElement('a', 'tag tag--green', `✓ ${githubUsername}`);
+          profileLink.href = `https://github.com/${encodeURIComponent(githubUsername)}`;
+          profileLink.target = '_blank';
+          profileLink.rel = 'noopener noreferrer';
+          profileLink.addEventListener('click', event => event.stopPropagation());
+          githubCell.appendChild(profileLink);
+        } else {
+          githubCell.appendChild(
+            u.github_connected
+              ? textElement('span', 'tag tag--green', `✓ ${githubUsername}`)
+              : textElement('span', 'tag tag--gray', 'Not connected'),
+          );
+        }
         tr.appendChild(githubCell);
 
         const countCell = document.createElement('td');
